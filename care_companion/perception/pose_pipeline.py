@@ -36,6 +36,12 @@ def _model_path(fall_cfg: dict) -> Path:
   return Path(raw) if raw else DEFAULT_MODEL_PATH
 
 
+def _urlopen_no_proxy(req: urllib.request.Request, timeout: int = 120):
+  """绕过失效的 HTTP_PROXY（如 127.0.0.1:17897）。"""
+  opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+  return opener.open(req, timeout=timeout)
+
+
 def ensure_pose_model(path: Path | None = None) -> Path:
   """确保本地存在 MediaPipe Tasks 模型文件。"""
   target = path or DEFAULT_MODEL_PATH
@@ -44,8 +50,11 @@ def ensure_pose_model(path: Path | None = None) -> Path:
   target.parent.mkdir(parents=True, exist_ok=True)
   logger.info("正在下载 MediaPipe 姿态模型 → %s", target)
   req = urllib.request.Request(MODEL_URL, headers={"User-Agent": "CareCompanion/1.0"})
-  with urllib.request.urlopen(req, timeout=120) as resp, open(target, "wb") as f:
+  with _urlopen_no_proxy(req) as resp, open(target, "wb") as f:
     f.write(resp.read())
+  if target.stat().st_size < 100_000:
+    target.unlink(missing_ok=True)
+    raise RuntimeError("姿态模型下载失败，请运行: bash scripts/download_mediapipe_models.sh")
   return target
 
 
@@ -79,7 +88,7 @@ def _ensure_tasks_landmarker(model_path: Path):
     return False
   try:
     import mediapipe as mp
-    from mediapipe.tasks.python.core import BaseOptions
+    from mediapipe.tasks.python.core.base_options import BaseOptions
     from mediapipe.tasks.python.vision import PoseLandmarker, PoseLandmarkerOptions, RunningMode
 
     opts = PoseLandmarkerOptions(
@@ -215,11 +224,15 @@ class PosePipeline:
 
     model_path = self._model_path
     if not model_path.is_file():
-      return (
-        PoseMetrics(1.1, 0.0, False, None),
-        FallResult(0.0, False, "缺少姿态模型，请运行 bash scripts/download_mediapipe_models.sh"),
-        image_bgr.copy(),
-      )
+      try:
+        ensure_pose_model(model_path)
+      except Exception as exc:
+        logger.warning("自动下载姿态模型失败: %s", exc)
+        return (
+          PoseMetrics(1.1, 0.0, False, None),
+          FallResult(0.0, False, "缺少姿态模型：在终端执行 bash scripts/download_mediapipe_models.sh"),
+          image_bgr.copy(),
+        )
 
     if not _ensure_tasks_landmarker(model_path):
       return (

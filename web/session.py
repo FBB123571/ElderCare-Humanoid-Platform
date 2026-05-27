@@ -37,6 +37,12 @@ class CareSession:
     self.last_vision: dict | None = None
 
   def analyze_vision(self, image_bytes: bytes, dt: float = 0.1) -> dict:
+    try:
+      return self._analyze_vision_impl(image_bytes, dt)
+    except Exception as exc:
+      return {"ok": False, "error": f"视觉分析异常: {exc}"}
+
+  def _analyze_vision_impl(self, image_bytes: bytes, dt: float = 0.1) -> dict:
     img = self.pose.decode_upload(image_bytes)
     if img is None:
       return {"ok": False, "error": "无法解码图像"}

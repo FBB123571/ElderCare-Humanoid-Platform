@@ -13,8 +13,14 @@ source .venv/bin/activate
 pip install -q fastapi "uvicorn[standard]" 2>/dev/null || pip install fastapi "uvicorn[standard]"
 
 PORT="${1:-8765}"
+MODEL="data/models/pose_landmarker_lite.task"
 
-if curl -sf "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
+if [[ ! -f "$MODEL" ]]; then
+  echo "⚠️  未找到 MediaPipe 姿态模型，正在尝试下载（视觉分析需要）…"
+  bash scripts/download_mediapipe_models.sh || echo "   下载失败：请手动执行 bash scripts/download_mediapipe_models.sh"
+fi
+
+if curl --noproxy '*' -sf "http://127.0.0.1:${PORT}/api/health" >/dev/null 2>&1; then
   echo "✅ Web 控制台已在运行: http://127.0.0.1:${PORT}"
   echo "   Cursor → 查看 → 端口 → 8765 →「在浏览器中打开」"
   echo "   或浏览器访问: http://localhost:${PORT}"
