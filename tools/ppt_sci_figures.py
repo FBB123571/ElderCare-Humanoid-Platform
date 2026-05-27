@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "assets" / "sci"
 EVAL_JSON = ROOT / "data" / "evaluation" / "results" / "fall_eval_report.json"
 
-FIG_W, FIG_H = 5.0, 3.9
+# 与 ppt_layout 右栏 FIG_WIDTH × FIG_BODY_H 一致，嵌入时不留白边过大
+FIG_W, FIG_H = 5.05, 3.84
 DPI = 280
 
 # 论文常用配色（ColorBrewer / IEEE 风格）
@@ -395,7 +396,7 @@ def fig_eval_results() -> Path:
   details = data.get("details", [])
 
   fig = _fig()
-  ax_cm = fig.add_axes([0.08, 0.12, 0.38, 0.78])
+  ax_cm = fig.add_axes([0.06, 0.14, 0.36, 0.72])
   cm = np.array([[tn, fp], [fn, tp]])
   im = ax_cm.imshow(cm, cmap="Blues", vmin=0, vmax=max(cm.max(), 1))
   ax_cm.set_xticks([0, 1])
@@ -407,7 +408,7 @@ def fig_eval_results() -> Path:
       ax_cm.text(j, i, str(int(cm[i, j])), ha="center", va="center", fontsize=14, fontweight="bold", color=C0)
   ax_cm.set_title("(a) 混淆矩阵\n(n=6 场景)", fontsize=10, fontweight="bold", color=C0)
 
-  ax_bar = fig.add_axes([0.52, 0.18, 0.44, 0.72])
+  ax_bar = fig.add_axes([0.46, 0.14, 0.50, 0.72])
   if details:
     names = [d["name"].replace("_", "\n") for d in details]
     scores = [d.get("max_score", 0) for d in details]

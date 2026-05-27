@@ -26,7 +26,18 @@ RIBBON_H = 0.34
 RIBBON_GAP = 0.10
 
 IMG_PAD = 0.06
-CAPTION_H = 0.20
+CAPTION_H = 0.22
+
+# 右栏配图区（严格不越过 COL_L 分界线）
+FIG_PAD_X = 0.10
+FIG_PAD_Y = 0.06
+FIG_LEFT = COL_R + FIG_PAD_X
+FIG_WIDTH = COL_R_W - 2 * FIG_PAD_X
+FIG_TOP = CONTENT_TOP + FIG_PAD_Y
+FIG_CAP_H = CAPTION_H
+# 图体 + 图注均在 CONTENT 内
+FIG_TOTAL_H = CONTENT_H - 2 * FIG_PAD_Y
+FIG_BODY_H = FIG_TOTAL_H - FIG_CAP_H - 0.04
 
 
 def body_height(*, with_ribbon: bool = False) -> float:

@@ -22,7 +22,14 @@ from tools.ppt_layout import (
   CONTENT_BOTTOM,
   CONTENT_H,
   CONTENT_TOP,
+  FIG_BODY_H,
+  FIG_CAP_H,
+  FIG_LEFT,
+  FIG_TOP,
+  FIG_TOTAL_H,
+  FIG_WIDTH,
   FOOTER_H,
+  GUTTER,
   HEADER_H,
   IMG_PAD,
   MARGIN,
@@ -185,8 +192,8 @@ def _bullets_panel(
   highlights = highlights or []
   top = CONTENT_TOP
   height = CONTENT_H
-  foot_h = 0.36 if takeaway else 0.0
-  pad_top, pad_side = 0.14, 0.20
+  foot_h = 0.34 if takeaway else 0.0
+  pad_top, pad_side = 0.12, 0.18
 
   panel = slide.shapes.add_shape(1, Inches(COL_L), Inches(top), Inches(COL_L_W), Inches(height))
   panel.fill.solid()
@@ -218,8 +225,8 @@ def _bullets_panel(
     p = tf.paragraphs[0]
     p.text = line if line.startswith("●") else f"● {line}"
     _set_para_font(p, size, bold=(i in highlights), color=DARK if i in highlights else BLACK)
-    p.line_spacing = 1.15
-    p.space_after = Pt(0)
+    p.line_spacing = 1.12
+    p.space_after = Pt(2)
 
   if takeaway:
     fy = top + height - foot_h
@@ -250,6 +257,15 @@ def _fit_image(path: Path, max_w: float, max_h: float) -> tuple[float, float]:
   return w, h
 
 
+def _draw_figure_panel(slide, *, left: float, top: float, width: float, height: float) -> None:
+  """右栏配图底板，与左栏要点区对齐、不越界。"""
+  panel = slide.shapes.add_shape(1, Inches(left), Inches(top), Inches(width), Inches(height))
+  panel.fill.solid()
+  panel.fill.fore_color.rgb = WHITE
+  panel.line.color.rgb = BORDER
+  panel.line.width = Pt(0.75)
+
+
 def _place_figure(
   slide,
   path: Path,
@@ -259,43 +275,72 @@ def _place_figure(
   max_w: float,
   max_h: float,
   caption: str = "",
-  fill_ratio: float = 1.0,
-  edge_to_edge: bool = False,
-  cover: bool = False,
+  fill_ratio: float = 0.96,
+  framed: bool = True,
 ) -> None:
-  """在指定区域内放置配图；cover=True 时放大填满区域（适合数据图）。"""
+  """在矩形区域内等比缩放（contain），禁止溢出到左栏或页眉页脚。"""
   if not path.exists():
     return
-  cap_h = 0 if edge_to_edge else (CAPTION_H if caption else 0)
-  box_w = max_w * fill_ratio
-  box_h = (max_h - cap_h) * fill_ratio
-  w0, h0 = _fit_image(path, box_w, box_h)
-  if cover:
-    scale = max(box_w / w0, box_h / h0)
-    w, h = w0 * scale, h0 * scale
-  else:
-    w, h = w0, h0
-  x = left + (max_w - w) / 2
-  y = top + (max_h - cap_h - h) / 2
 
-  pad = 0.03 if edge_to_edge else 0.05
-  if not edge_to_edge:
+  cap_h = FIG_CAP_H if caption else 0.0
+  region_h = max_h
+  img_h_max = max(0.5, region_h - cap_h - 0.06)
+  box_w = max(0.5, max_w * fill_ratio)
+  box_h = max(0.5, img_h_max * fill_ratio)
+
+  w, h = _fit_image(path, box_w, box_h)
+  # 二次钳制，防止浮点误差越界
+  if w > max_w:
+    h *= max_w / w
+    w = max_w
+  if h > img_h_max:
+    w *= img_h_max / h
+    h = img_h_max
+
+  x = left + (max_w - w) / 2
+  y = top + (img_h_max - h) / 2
+
+  if framed:
+    pad = 0.04
     frame = slide.shapes.add_shape(
       1, Inches(x - pad), Inches(y - pad),
-      Inches(w + 2 * pad), Inches(h + 2 * pad + (CAPTION_H if caption else 0)),
+      Inches(min(max_w, w + 2 * pad)), Inches(min(img_h_max, h + 2 * pad)),
     )
     frame.fill.solid()
-    frame.fill.fore_color.rgb = WHITE
+    frame.fill.fore_color.rgb = RGBColor(252, 253, 255)
     frame.line.color.rgb = BORDER
-    frame.line.width = Pt(0.8)
+    frame.line.width = Pt(0.6)
 
   slide.shapes.add_picture(str(path), Inches(x), Inches(y), width=Inches(w), height=Inches(h))
-  if caption and not edge_to_edge:
-    cap = slide.shapes.add_textbox(Inches(left), Inches(y + h + 0.06), Inches(max_w), Inches(CAPTION_H))
-    cp = cap.text_frame.paragraphs[0]
+
+  if caption:
+    cap_top = top + region_h - cap_h
+    cap = slide.shapes.add_textbox(Inches(left), Inches(cap_top), Inches(max_w), Inches(cap_h))
+    tf = cap.text_frame
+    tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    cp = tf.paragraphs[0]
     cp.text = caption
     cp.alignment = PP_ALIGN.CENTER
-    _set_para_font(cp, 9, color=GRAY)
+    _set_para_font(cp, 8, color=GRAY)
+
+
+def _place_right_figure(slide, path: Path, *, caption: str = "") -> None:
+  """标准左文右图页的右栏配图。"""
+  panel_left = COL_R + 0.04
+  panel_w = COL_R_W - 0.08
+  _draw_figure_panel(slide, left=panel_left, top=FIG_TOP - 0.02, width=panel_w, height=FIG_TOTAL_H)
+  # 左栏与右栏分隔线
+  sep = slide.shapes.add_shape(1, Inches(COL_L + COL_L_W + GUTTER * 0.45), Inches(CONTENT_TOP),
+                               Inches(0.012), Inches(CONTENT_H))
+  sep.fill.solid()
+  sep.fill.fore_color.rgb = BORDER
+  sep.line.fill.background()
+  _place_figure(
+    slide, path,
+    left=FIG_LEFT, top=FIG_TOP, max_w=FIG_WIDTH, max_h=FIG_TOTAL_H,
+    caption=caption, fill_ratio=0.94, framed=True,
+  )
 
 
 def _content_slide(prs, title: str, footer_hint: str = ""):
@@ -397,13 +442,8 @@ def _slide_lr(
     sub = ASSETS / image
 
   kind = figure_kind or ("sci" if sci else ("diagram" if diagram else "photo"))
-  img_top = CONTENT_TOP + IMG_PAD
-  img_h = CONTENT_H - 2 * IMG_PAD
   cap = _caption_for(kind, caption)
-  _place_figure(
-    slide, sub, left=COL_R, top=img_top, max_w=COL_R_W, max_h=img_h,
-    caption=cap, fill_ratio=1.0, cover=(kind == "chart"),
-  )
+  _place_right_figure(slide, sub, caption=cap)
   return slide
 
 
@@ -416,12 +456,18 @@ def _slide_draw(prs, title: str, bullets: list[str], draw_fn, *, takeaway: str =
 
 def _screenshot_duo(prs, title: str, left_img: str, right_img: str, cap_l: str = "", cap_r: str = ""):
   slide = _content_slide(prs, title, "系统实拍")
-  half = (SLIDE_W - 2 * MARGIN - 0.15) / 2
+  gap = 0.14
+  half = (SLIDE_W - 2 * MARGIN - gap) / 2
+  region_h = CONTENT_H - 0.08
+  top = CONTENT_TOP + 0.04
   for i, (img, cap) in enumerate([(left_img, cap_l), (right_img, cap_r)]):
+    left = MARGIN + i * (half + gap)
+    _draw_figure_panel(slide, left=left, top=top, width=half, height=region_h)
     _place_figure(
       slide, ASSETS / img,
-      left=MARGIN + i * (half + 0.15), top=CONTENT_TOP + 0.05,
-      max_w=half, max_h=CONTENT_H - 0.1, caption=cap, fill_ratio=1.0,
+      left=left + 0.08, top=top + 0.06,
+      max_w=half - 0.16, max_h=region_h - 0.08,
+      caption=cap, fill_ratio=0.94, framed=False,
     )
   return slide
 
@@ -454,16 +500,25 @@ def _slide_open_source(prs):
     vp.word_wrap = True
     _set_para_font(vp, 10 if len(value) < 40 else 9, color=DARK)
 
+  _draw_figure_panel(slide, left=COL_R + 0.04, top=FIG_TOP - 0.02, width=COL_R_W - 0.08, height=FIG_TOTAL_H)
   qr = ASSETS / "ppt_demo_qr.png"
   checklist = SCI / "repro_checklist.png"
-  right_top = CONTENT_TOP + 0.08
-  right_h = CONTENT_H - 0.16
+  qr_w = 1.65
+  gap = 0.12
+  fig_left = FIG_LEFT
+  fig_top = FIG_TOP
+  fig_h = FIG_TOTAL_H
   if qr.exists():
-    _place_figure(slide, qr, left=COL_R + 0.12, top=right_top, max_w=1.85, max_h=1.85, caption="扫码访问仓库", fill_ratio=1.0)
+    _place_figure(
+      slide, qr, left=fig_left, top=fig_top + 0.15,
+      max_w=qr_w, max_h=qr_w + 0.1, caption="扫码访问仓库", fill_ratio=0.92, framed=False,
+    )
   if checklist.exists():
     _place_figure(
-      slide, checklist, left=COL_R + 2.05, top=right_top,
-      max_w=COL_R_W - 2.15, max_h=right_h, caption="可复现性检查项", fill_ratio=0.98, cover=True,
+      slide, checklist,
+      left=fig_left + qr_w + gap, top=fig_top,
+      max_w=FIG_WIDTH - qr_w - gap, max_h=fig_h,
+      caption="可复现性检查项", fill_ratio=0.92, framed=False,
     )
 
 
@@ -589,22 +644,26 @@ def _part_divider(prs, part: str, subtitle: str, preview: list[str], sci_thumb: 
   right_bg.line.fill.background()
   thumb_path = SCI / sci_thumb if sci_thumb else None
   if thumb_path and thumb_path.exists():
+    pad = 0.18
     _place_figure(
       slide, thumb_path,
-      left=left_w + 0.12, top=CONTENT_TOP + 0.08,
-      max_w=right_w - 0.24, max_h=CONTENT_H - 0.12,
-      caption="", fill_ratio=0.98, cover=True, edge_to_edge=True,
+      left=left_w + pad, top=CONTENT_TOP + 0.12,
+      max_w=right_w - 2 * pad, max_h=CONTENT_H - 0.22,
+      caption="", fill_ratio=0.90, framed=True,
     )
 
 
 def _screenshot_slide(prs, title: str, image_file: str, caption: str = ""):
   slide = _content_slide(prs, title, "系统实拍")
   path = ASSETS / image_file
+  left, w = MARGIN, SLIDE_W - 2 * MARGIN
+  top, h = CONTENT_TOP + 0.04, CONTENT_H - 0.08
+  _draw_figure_panel(slide, left=left, top=top, width=w, height=h)
   _place_figure(
     slide, path,
-    left=MARGIN, top=CONTENT_TOP + 0.05,
-    max_w=SLIDE_W - 2 * MARGIN, max_h=CONTENT_H - 0.05,
-    caption=caption, fill_ratio=0.97,
+    left=left + 0.10, top=top + 0.06,
+    max_w=w - 0.20, max_h=h - 0.06,
+    caption=caption, fill_ratio=0.94, framed=False,
   )
 
 
@@ -658,13 +717,22 @@ def _slide_qr_dual(prs):
     "演示录像已附仓库",
     "欢迎评委扫码查阅",
   ], size=13)
+  _draw_figure_panel(slide, left=COL_R + 0.04, top=FIG_TOP - 0.02, width=COL_R_W - 0.08, height=FIG_TOTAL_H)
   qr = ASSETS / "ppt_demo_qr.png"
   demo = ASSETS / "ppt_mediapipe_pose.png"
+  qr_w = 1.75
+  gap = 0.12
   if qr.exists():
-    _place_figure(slide, qr, left=COL_R + 0.1, top=CONTENT_TOP + 0.2, max_w=2.1, max_h=2.1, caption="仓库二维码", fill_ratio=1.0)
+    _place_figure(
+      slide, qr, left=FIG_LEFT, top=FIG_TOP + 0.2,
+      max_w=qr_w, max_h=qr_w, caption="仓库二维码", fill_ratio=0.92, framed=False,
+    )
   if demo.exists():
-    _place_figure(slide, demo, left=COL_R + 2.35, top=CONTENT_TOP + 0.15,
-                  max_w=COL_R_W - 2.45, max_h=CONTENT_H - 0.2, caption="演示界面", fill_ratio=1.0)
+    _place_figure(
+      slide, demo, left=FIG_LEFT + qr_w + gap, top=FIG_TOP,
+      max_w=FIG_WIDTH - qr_w - gap, max_h=FIG_TOTAL_H,
+      caption="演示界面", fill_ratio=0.92, framed=False,
+    )
 
 
 def _ensure_qr_code() -> None:
