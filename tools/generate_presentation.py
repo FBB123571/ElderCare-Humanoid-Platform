@@ -157,18 +157,35 @@ def _ribbon(slide, text: str):
   _set_para_font(p, 11, bold=True, color=WHITE)
 
 
+def _style_cell(cell, text: str, *, bg=DARK, fg=WHITE, bold=True, size=11):
+  cell.text = ""
+  p = cell.text_frame.paragraphs[0]
+  p.text = text
+  p.alignment = PP_ALIGN.CENTER
+  _set_para_font(p, size, bold=bold, color=fg)
+  cell.text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+  cell.fill.solid()
+  cell.fill.fore_color.rgb = bg
+  cell.margin_left = Pt(4)
+  cell.margin_right = Pt(4)
+  cell.margin_top = Pt(2)
+  cell.margin_bottom = Pt(2)
+
+
 def _bullets_panel(
   slide,
   items: list[str],
   *,
   highlights: list[int] | None = None,
-  size: int = 13,
+  size: int = 12,
   takeaway: str = "",
 ):
+  """左栏要点：每条独立文本框 + 顶对齐，避免垂直居中造成行距错乱。"""
   highlights = highlights or []
   top = CONTENT_TOP
   height = CONTENT_H
-  foot_h = 0.38 if takeaway else 0.0
+  foot_h = 0.36 if takeaway else 0.0
+  pad_top, pad_side = 0.14, 0.20
 
   panel = slide.shapes.add_shape(1, Inches(COL_L), Inches(top), Inches(COL_L_W), Inches(height))
   panel.fill.solid()
@@ -181,34 +198,45 @@ def _bullets_panel(
   stripe.fill.fore_color.rgb = DARK
   stripe.line.fill.background()
 
+  text_top = top + pad_top
+  text_h = height - pad_top - 0.12 - foot_h
+  n = max(1, len(items))
+  slot_h = text_h / n
+
+  for i, line in enumerate(items):
+    y = text_top + i * slot_h
+    box = slide.shapes.add_textbox(
+      Inches(COL_L + pad_side), Inches(y),
+      Inches(COL_L_W - pad_side * 2), Inches(slot_h - 0.02),
+    )
+    tf = box.text_frame
+    tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.TOP
+    tf.margin_left = Pt(2)
+    tf.margin_top = Pt(0)
+    p = tf.paragraphs[0]
+    p.text = line if line.startswith("●") else f"● {line}"
+    _set_para_font(p, size, bold=(i in highlights), color=DARK if i in highlights else BLACK)
+    p.line_spacing = 1.15
+    p.space_after = Pt(0)
+
   if takeaway:
     fy = top + height - foot_h
-    foot = slide.shapes.add_shape(1, Inches(COL_L + 0.08), Inches(fy), Inches(COL_L_W - 0.16), Inches(foot_h - 0.04))
+    foot = slide.shapes.add_shape(
+      1, Inches(COL_L + 0.10), Inches(fy), Inches(COL_L_W - 0.20), Inches(foot_h - 0.02),
+    )
     foot.fill.solid()
     foot.fill.fore_color.rgb = DARK
     foot.line.fill.background()
-    fb = slide.shapes.add_textbox(Inches(COL_L + 0.14), Inches(fy + 0.08), Inches(COL_L_W - 0.28), Inches(foot_h - 0.12))
-    fp = fb.text_frame.paragraphs[0]
+    fb = slide.shapes.add_textbox(
+      Inches(COL_L + 0.14), Inches(fy + 0.07), Inches(COL_L_W - 0.28), Inches(foot_h - 0.14),
+    )
+    tf = fb.text_frame
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    fp = tf.paragraphs[0]
     fp.text = takeaway
     fp.alignment = PP_ALIGN.CENTER
     _set_para_font(fp, 11, bold=True, color=WHITE)
-
-  inner_top = top + 0.16
-  inner_h = height - 0.30 - foot_h
-  box = slide.shapes.add_textbox(
-    Inches(COL_L + 0.22), Inches(inner_top),
-    Inches(COL_L_W - 0.34), Inches(inner_h),
-  )
-  tf = box.text_frame
-  tf.word_wrap = True
-  tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-  gap = max(5, int((inner_h * 72 - len(items) * size * 1.3) / max(1, len(items) - 1)))
-  for i, line in enumerate(items):
-    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-    p.text = f"● {line}"
-    _set_para_font(p, size, bold=(i in highlights), color=DARK if i in highlights else BLACK)
-    p.space_after = Pt(gap)
-    p.line_spacing = 1.2
 
 
 def _fit_image(path: Path, max_w: float, max_h: float) -> tuple[float, float]:
@@ -285,52 +313,40 @@ def _caption_for(kind: str, custom: str) -> str:
 
 
 def _info_cards_column(slide, left: float, width: float, rows: list[tuple[str, str]]):
-  """右栏大号信息卡（参赛信息等），避免小 PNG 看不清。"""
+  """右栏参赛信息表：单元格垂直居中、行高均分。"""
   top = CONTENT_TOP
   height = CONTENT_H
-  bg = slide.shapes.add_shape(1, Inches(left), Inches(top), Inches(width), Inches(height))
-  bg.fill.solid()
-  bg.fill.fore_color.rgb = WHITE
-  bg.line.color.rgb = BORDER
-  bg.line.width = Pt(1.0)
+  n = len(rows)
+  tbl = slide.shapes.add_table(n, 2, Inches(left), Inches(top), Inches(width), Inches(height)).table
+  label_w = Inches(0.92)
+  tbl.columns[0].width = label_w
+  tbl.columns[1].width = Inches(width) - label_w
 
-  gap = 0.07
-  row_h = (height - gap * (len(rows) + 1)) / len(rows)
-  y = top + gap
-  for label, value in rows:
-    lab = slide.shapes.add_shape(1, Inches(left + 0.12), Inches(y), Inches(1.05), Inches(row_h))
-    lab.fill.solid()
-    lab.fill.fore_color.rgb = DARK
-    lab.line.fill.background()
-    lb = slide.shapes.add_textbox(Inches(left + 0.12), Inches(y + row_h * 0.28), Inches(1.05), Inches(row_h * 0.5))
-    lp = lb.text_frame.paragraphs[0]
-    lp.text = label
-    lp.alignment = PP_ALIGN.CENTER
-    _set_para_font(lp, 11, bold=True, color=WHITE)
-
-    val = slide.shapes.add_shape(
-      1, Inches(left + 1.22), Inches(y), Inches(width - 1.34), Inches(row_h),
-    )
-    val.fill.solid()
-    val.fill.fore_color.rgb = LIGHT_BLUE
-    val.line.color.rgb = BORDER
-    vb = slide.shapes.add_textbox(
-      Inches(left + 1.32), Inches(y + 0.06), Inches(width - 1.52), Inches(row_h - 0.1),
-    )
-    vb.text_frame.word_wrap = True
-    vp = vb.text_frame.paragraphs[0]
-    vp.text = value
-    _set_para_font(vp, 11 if len(value) < 36 else 9, bold=True, color=DARK)
-    y += row_h + gap
+  for r, (label, value) in enumerate(rows):
+    _style_cell(tbl.cell(r, 0), label, bg=DARK, fg=WHITE, bold=True, size=10)
+    c1 = tbl.cell(r, 1)
+    c1.text = ""
+    p = c1.text_frame.paragraphs[0]
+    p.text = value
+    p.alignment = PP_ALIGN.LEFT
+    fs = 10 if len(value) <= 28 else 8
+    _set_para_font(p, fs, bold=False, color=DARK)
+    c1.text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    c1.text_frame.word_wrap = True
+    c1.fill.solid()
+    c1.fill.fore_color.rgb = LIGHT_BLUE
+    c1.margin_left = Pt(6)
+    c1.margin_right = Pt(4)
 
 
 def _slide_team_info(prs):
   slide = _content_slide(prs, "参赛信息")
   _bullets_panel(slide, [
     "赛项：创新赛 · 机器人创新赛道",
-    f"作品：{PROJECT_TITLE}",
-    "特色：理论可讲清 · 系统可演示 · 指标可复现",
-  ], size=13)
+    "作品：智能养老陪伴机器人仿真平台",
+    "（基于大语言模型）",
+    "特色：理论清晰 · 系统可演示 · 指标可复现",
+  ], size=12)
   _info_cards_column(
     slide, COL_R, COL_R_W,
     [
@@ -660,12 +676,12 @@ def main():
                 ["老龄化与跌倒空窗", "方案对比", "项目目标"], "aging_chart.png")
 
   _slide_lr(prs, "社会背景：老龄化与跌倒风险", [
-    "独居老人增多，跌倒后「发现空窗」是核心痛点",
-    "情感陪伴需求上升，监测设备难以形成照护闭环",
+    "独居老人增多，跌倒「发现空窗」是核心痛点",
+    "情感陪伴需求上升，监测难形成照护闭环",
     "政策导向：智慧养老与居家安全并重",
-    "本项目聚焦可落地的仿真验证与人形接口",
+    "本项目：仿真验证 + 人形机器人接口",
   ], "aging_chart.png", figure_kind="chart", caption="国家统计局趋势示意",
-    key_takeaway="痛点：发现慢 + 闭环弱", highlight_last=True)
+    key_takeaway="痛点：发现慢 + 闭环弱", highlight_last=True, bullet_size=12)
 
   _slide_lr(prs, "现有方案对比", [
     "传统音箱/摄像头/手环：功能割裂",
