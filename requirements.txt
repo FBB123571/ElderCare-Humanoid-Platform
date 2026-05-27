@@ -11,6 +11,9 @@ mediapipe>=0.10.9
 python-pptx>=0.6.23
 pytest>=7.0
 
+# 自动生成演示视频（可选）
+# playwright>=1.40
+
 # 可选：真实大模型
 # openai>=1.0
 
