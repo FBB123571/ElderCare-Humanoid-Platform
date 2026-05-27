@@ -158,11 +158,17 @@ def _ribbon(slide, text: str):
 
 
 def _bullets_panel(
-  slide, items: list[str], *, highlights: list[int] | None = None, size: int = 13, with_ribbon: bool = False,
+  slide,
+  items: list[str],
+  *,
+  highlights: list[int] | None = None,
+  size: int = 13,
+  takeaway: str = "",
 ):
   highlights = highlights or []
   top = CONTENT_TOP
-  height = body_height(with_ribbon=with_ribbon)
+  height = CONTENT_H
+  foot_h = 0.38 if takeaway else 0.0
 
   panel = slide.shapes.add_shape(1, Inches(COL_L), Inches(top), Inches(COL_L_W), Inches(height))
   panel.fill.solid()
@@ -175,8 +181,20 @@ def _bullets_panel(
   stripe.fill.fore_color.rgb = DARK
   stripe.line.fill.background()
 
-  inner_top = top + 0.18
-  inner_h = height - 0.36
+  if takeaway:
+    fy = top + height - foot_h
+    foot = slide.shapes.add_shape(1, Inches(COL_L + 0.08), Inches(fy), Inches(COL_L_W - 0.16), Inches(foot_h - 0.04))
+    foot.fill.solid()
+    foot.fill.fore_color.rgb = DARK
+    foot.line.fill.background()
+    fb = slide.shapes.add_textbox(Inches(COL_L + 0.14), Inches(fy + 0.08), Inches(COL_L_W - 0.28), Inches(foot_h - 0.12))
+    fp = fb.text_frame.paragraphs[0]
+    fp.text = takeaway
+    fp.alignment = PP_ALIGN.CENTER
+    _set_para_font(fp, 11, bold=True, color=WHITE)
+
+  inner_top = top + 0.16
+  inner_h = height - 0.30 - foot_h
   box = slide.shapes.add_textbox(
     Inches(COL_L + 0.22), Inches(inner_top),
     Inches(COL_L_W - 0.34), Inches(inner_h),
@@ -184,7 +202,7 @@ def _bullets_panel(
   tf = box.text_frame
   tf.word_wrap = True
   tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-  gap = max(6, int((inner_h * 72 - len(items) * size * 1.3) / max(1, len(items) - 1)))
+  gap = max(5, int((inner_h * 72 - len(items) * size * 1.3) / max(1, len(items) - 1)))
   for i, line in enumerate(items):
     p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
     p.text = f"● {line}"
@@ -214,14 +232,20 @@ def _place_figure(
   caption: str = "",
   fill_ratio: float = 1.0,
   edge_to_edge: bool = False,
+  cover: bool = False,
 ) -> None:
-  """在指定区域内等比居中放置配图，尽量填满可视区。"""
+  """在指定区域内放置配图；cover=True 时放大填满区域（适合数据图）。"""
   if not path.exists():
     return
   cap_h = 0 if edge_to_edge else (CAPTION_H if caption else 0)
   box_w = max_w * fill_ratio
   box_h = (max_h - cap_h) * fill_ratio
-  w, h = _fit_image(path, box_w, box_h)
+  w0, h0 = _fit_image(path, box_w, box_h)
+  if cover:
+    scale = max(box_w / w0, box_h / h0)
+    w, h = w0 * scale, h0 * scale
+  else:
+    w, h = w0, h0
   x = left + (max_w - w) / 2
   y = top + (max_h - cap_h - h) / 2
 
@@ -254,6 +278,74 @@ def _content_slide(prs, title: str, footer_hint: str = ""):
   return slide
 
 
+def _caption_for(kind: str, custom: str) -> str:
+  if custom:
+    return custom
+  return {"diagram": "理论框图", "chart": "数据示意", "photo": "系统实拍"}.get(kind, "")
+
+
+def _info_cards_column(slide, left: float, width: float, rows: list[tuple[str, str]]):
+  """右栏大号信息卡（参赛信息等），避免小 PNG 看不清。"""
+  top = CONTENT_TOP
+  height = CONTENT_H
+  bg = slide.shapes.add_shape(1, Inches(left), Inches(top), Inches(width), Inches(height))
+  bg.fill.solid()
+  bg.fill.fore_color.rgb = WHITE
+  bg.line.color.rgb = BORDER
+  bg.line.width = Pt(1.0)
+
+  gap = 0.07
+  row_h = (height - gap * (len(rows) + 1)) / len(rows)
+  y = top + gap
+  for label, value in rows:
+    lab = slide.shapes.add_shape(1, Inches(left + 0.12), Inches(y), Inches(1.05), Inches(row_h))
+    lab.fill.solid()
+    lab.fill.fore_color.rgb = DARK
+    lab.line.fill.background()
+    lb = slide.shapes.add_textbox(Inches(left + 0.12), Inches(y + row_h * 0.28), Inches(1.05), Inches(row_h * 0.5))
+    lp = lb.text_frame.paragraphs[0]
+    lp.text = label
+    lp.alignment = PP_ALIGN.CENTER
+    _set_para_font(lp, 11, bold=True, color=WHITE)
+
+    val = slide.shapes.add_shape(
+      1, Inches(left + 1.22), Inches(y), Inches(width - 1.34), Inches(row_h),
+    )
+    val.fill.solid()
+    val.fill.fore_color.rgb = LIGHT_BLUE
+    val.line.color.rgb = BORDER
+    vb = slide.shapes.add_textbox(
+      Inches(left + 1.32), Inches(y + 0.06), Inches(width - 1.52), Inches(row_h - 0.1),
+    )
+    vb.text_frame.word_wrap = True
+    vp = vb.text_frame.paragraphs[0]
+    vp.text = value
+    _set_para_font(vp, 11 if len(value) < 36 else 9, bold=True, color=DARK)
+    y += row_h + gap
+
+
+def _slide_team_info(prs):
+  slide = _content_slide(prs, "参赛信息")
+  _bullets_panel(slide, [
+    "赛项：创新赛 · 机器人创新赛道",
+    f"作品：{PROJECT_TITLE}",
+    "特色：理论可讲清 · 系统可演示 · 指标可复现",
+  ], size=13)
+  _info_cards_column(
+    slide, COL_R, COL_R_W,
+    [
+      ("团队", TEAM_NAME),
+      ("学校", SCHOOL),
+      ("队长", CAPTAIN),
+      ("队员", MEMBER),
+      ("指导教师", ADVISOR),
+      ("团队编号", TEAM_ID),
+      ("作品编号", PROJECT_ID),
+    ],
+  )
+  return slide
+
+
 def _slide_lr(
   prs,
   title: str,
@@ -261,38 +353,35 @@ def _slide_lr(
   image: str | Path,
   *,
   diagram: bool = True,
+  figure_kind: str = "",
   bullet_size: int = 13,
   caption: str = "",
   highlight_last: bool = False,
   footer_hint: str = "",
   key_takeaway: str = "",
 ):
-  has_ribbon = bool(key_takeaway)
   slide = _content_slide(prs, title, footer_hint)
   hi = [len(bullets) - 1] if highlight_last and bullets else []
-  _bullets_panel(slide, bullets, highlights=hi, size=bullet_size, with_ribbon=has_ribbon)
+  _bullets_panel(slide, bullets, highlights=hi, size=bullet_size, takeaway=key_takeaway)
 
   sub = DIAG / image if diagram else ASSETS / image
   if not sub.exists() and diagram:
     sub = ASSETS / image
 
+  kind = figure_kind or ("diagram" if diagram else "photo")
   img_top = CONTENT_TOP + IMG_PAD
   img_h = CONTENT_H - 2 * IMG_PAD
-  cap = caption or ("理论框图" if diagram else "系统实拍")
+  cap = _caption_for(kind, caption)
   _place_figure(
     slide, sub, left=COL_R, top=img_top, max_w=COL_R_W, max_h=img_h,
-    caption=cap, fill_ratio=1.0,
+    caption=cap, fill_ratio=1.0, cover=(kind == "chart"),
   )
-
-  if has_ribbon:
-    _ribbon(slide, key_takeaway)
   return slide
 
 
 def _slide_open_source(prs):
   """开源页：左信息卡片 + 右二维码与演示缩略图（避免 QR 过大）。"""
   slide = _content_slide(prs, "开源与可复现性")
-  _ribbon(slide, "完整源码 · 可复现演示 · 欢迎评委扫码")
 
   cards = [
     ("GitHub 仓库", GITHUB_URL),
@@ -301,7 +390,7 @@ def _slide_open_source(prs):
     ("演示录像", "docs/assets/demo_carecompanion.mp4"),
     ("软著", "申请中"),
   ]
-  card_h = (body_height(with_ribbon=True) - 0.1) / len(cards)
+  card_h = (CONTENT_H - 0.1) / len(cards)
   for i, (label, value) in enumerate(cards):
     y = CONTENT_TOP + 0.05 + i * card_h
     card = slide.shapes.add_shape(1, Inches(COL_L), Inches(y), Inches(COL_L_W), Inches(card_h - 0.08))
@@ -321,7 +410,7 @@ def _slide_open_source(prs):
   qr = ASSETS / "ppt_demo_qr.png"
   thumb = ASSETS / "ppt_full_dashboard.png"
   right_top = CONTENT_TOP + 0.08
-  right_h = body_height(with_ribbon=True) - 0.16
+  right_h = CONTENT_H - 0.16
   if qr.exists():
     _place_figure(slide, qr, left=COL_R + 0.15, top=right_top, max_w=2.0, max_h=2.0, caption="扫码访问", fill_ratio=1.0)
   if thumb.exists():
@@ -565,14 +654,7 @@ def main():
     "附录  演示界面与开源仓库",
   ], "pipeline.png", caption="全篇结构", key_takeaway="理论 + 工程 + 现场演示")
 
-  _slide_lr(prs, "参赛信息", [
-    f"作品：{PROJECT_TITLE}",
-    f"赛项：{COMP_LINE2}",
-    f"团队编号：{TEAM_ID}",
-    f"作品编号：{PROJECT_ID}",
-    f"队员：{CAPTAIN}（队长）、{MEMBER}",
-    f"指导教师：{ADVISOR}",
-  ], "team_card.png", caption="报名信息")
+  _slide_team_info(prs)
 
   _part_divider(prs, "第一部分", "项目背景 · 需求分析 · 方案定位",
                 ["老龄化与跌倒空窗", "方案对比", "项目目标"], "aging_chart.png")
@@ -582,7 +664,8 @@ def main():
     "情感陪伴需求上升，监测设备难以形成照护闭环",
     "政策导向：智慧养老与居家安全并重",
     "本项目聚焦可落地的仿真验证与人形接口",
-  ], "aging_chart.png", key_takeaway="痛点：发现慢 + 闭环弱", highlight_last=True)
+  ], "aging_chart.png", figure_kind="chart", caption="国家统计局趋势示意",
+    key_takeaway="痛点：发现慢 + 闭环弱", highlight_last=True)
 
   _slide_lr(prs, "现有方案对比", [
     "传统音箱/摄像头/手环：功能割裂",

@@ -99,44 +99,48 @@ def gen_cover_banner() -> Path:
 
 
 def gen_team_card() -> Path:
-  fig, ax = _canvas()
+  """备用小图（章节页等）；参赛页已改用 pptx 原生信息卡。"""
+  fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))
+  ax.set_xlim(0, 5)
+  ax.set_ylim(0, 3.9)
   ax.axis("off")
-  ax.text(2.5, 3.55, "参赛信息", ha="center", fontsize=15, color=C_DARK, fontweight="bold")
+  ax.add_patch(FancyBboxPatch((0.1, 0.08), 4.8, 3.74, boxstyle="round", facecolor=C_LIGHT, edgecolor=C_BLUE, lw=2.5))
   fields = [
     ("团队", "从容应队"), ("学校", "中山大学"),
     ("队长", "刘小凡"), ("队员", "白冉"), ("指导", "彭键清"),
     ("团队编号", "CRAIC2026-TEAM-8FJQKLMI"),
     ("作品编号", "CRAIC20264ZEFT1DF"),
   ]
-  y = 3.05
+  y = 3.35
   for k, v in fields:
-    ax.text(0.35, y, k, fontsize=10, color=C_GRAY, fontweight="bold")
-    ax.text(1.35, y, v, fontsize=10, color=C_DARK, fontweight="bold")
-    y -= 0.38
-  ax.add_patch(FancyBboxPatch((0.15, 0.12), 4.7, 3.65, boxstyle="round", fill=False, edgecolor=C_BLUE, lw=2))
+    _box(ax, (0.25, y - 0.42), (1.1, 0.38), k, C_DARK, fontsize=10)
+    ax.text(1.5, y - 0.22, v, fontsize=11, color=C_DARK, fontweight="bold", va="center")
+    y -= 0.48
   return _save(fig, "team_card.png")
 
 
 def gen_aging_chart() -> Path:
   fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))
   fig.patch.set_facecolor(C_BG)
-  ax.set_facecolor(C_LIGHT)
+  ax.set_facecolor("#F8FAFC")
   years = ["2020", "2025", "2030", "2035"]
   ratio = [13.5, 16.5, 20.5, 24.0]
-  bars = ax.bar(years, ratio, color=[C_BLUE, C_CYAN, C_ORANGE, C_RED], width=0.52, edgecolor="white", lw=1.5)
-  ax.set_ylabel("60岁及以上 (%)", fontsize=11, fontweight="bold")
-  ax.set_title("老龄化趋势（示意）", fontsize=13, fontweight="bold", color=C_DARK, pad=8)
-  ax.set_ylim(0, 28)
-  ax.tick_params(labelsize=10)
-  ax.spines["top"].set_visible(False)
-  ax.spines["right"].set_visible(False)
+  bars = ax.bar(years, ratio, color=[C_BLUE, C_CYAN, C_ORANGE, C_RED], width=0.58, edgecolor="white", lw=2)
+  ax.set_ylabel("60岁及以上人口占比 (%)", fontsize=13, fontweight="bold", labelpad=8)
+  ax.set_title("我国老龄化趋势", fontsize=15, fontweight="bold", color=C_DARK, pad=12)
+  ax.set_ylim(0, 30)
+  ax.tick_params(labelsize=12, width=0)
+  for spine in ("top", "right"):
+    ax.spines[spine].set_visible(False)
   ax.grid(axis="y", alpha=0.35, ls="--")
   for b, v in zip(bars, ratio):
-    ax.text(b.get_x() + b.get_width() / 2, v + 0.8, f"{v}%", ha="center", fontsize=11, fontweight="bold")
-  ax.annotate("跌倒空窗风险↑", xy=(2.0, 22), fontsize=10, color=C_RED, fontweight="bold",
-              bbox=dict(boxstyle="round", fc="#FEE2E2", ec=C_RED),
-              arrowprops=dict(arrowstyle="->", color=C_RED))
-  fig.subplots_adjust(left=0.14, right=0.96, top=0.88, bottom=0.14)
+    ax.text(b.get_x() + b.get_width() / 2, v + 0.9, f"{v}%", ha="center", fontsize=13, fontweight="bold", color=C_DARK)
+  ax.annotate(
+    "跌倒发现\n空窗风险↑", xy=(2.15, 21), fontsize=11, color=C_RED, fontweight="bold", ha="center",
+    bbox=dict(boxstyle="round,pad=0.4", fc="#FEE2E2", ec=C_RED, lw=1.5),
+    arrowprops=dict(arrowstyle="->", color=C_RED, lw=2),
+  )
+  fig.subplots_adjust(left=0.16, right=0.98, top=0.90, bottom=0.12)
   return _save(fig, "aging_chart.png")
 
 
