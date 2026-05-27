@@ -22,19 +22,14 @@ RED = RGBColor(192, 0, 0)
 GRAY = RGBColor(80, 80, 80)
 LIGHT_BLUE = RGBColor(235, 242, 250)
 
-COMP_LINE1 = "第二十六届中国机器人及人工智能大赛"
+COMP_LINE1 = "第二十八届中国机器人及人工智能大赛"
 COMP_LINE2 = "机器人创新赛道"
 
-# 16:9 幻灯片默认 10" × 7.5"
-SLIDE_W = 10.0
-SLIDE_H = 7.5
-HEADER_H = 0.55
-SHOT_TITLE_TOP = 0.58
-SHOT_TITLE_H = 0.62
-SHOT_IMG_TOP = 1.38
-SHOT_CAPTION_TOP = 6.72
-SHOT_IMG_MAX_W = 8.9
-SHOT_IMG_MAX_H = 5.15
+# 与 main() 中 prs 尺寸一致：16:9 → 10" × 5.625"
+SLIDE_W_IN = 10.0
+SLIDE_H_IN = 5.625
+HEADER_H_IN = 0.52
+MARGIN_X_IN = 0.45
 
 
 def _slide(prs: Presentation):
@@ -46,8 +41,12 @@ def _bg_white(slide):
   slide.background.fill.fore_color.rgb = WHITE
 
 
-def _header_bar(slide):
-  bar = slide.shapes.add_shape(1, Inches(0), Inches(0), Inches(10), Inches(0.55))
+def _slide_size_inches(prs: Presentation) -> tuple[float, float]:
+  return prs.slide_width / 914400, prs.slide_height / 914400
+
+
+def _header_bar(slide, slide_w: float = SLIDE_W_IN):
+  bar = slide.shapes.add_shape(1, Inches(0), Inches(0), Inches(slide_w), Inches(HEADER_H_IN))
   bar.fill.solid()
   bar.fill.fore_color.rgb = DARK
   bar.line.fill.background()
@@ -56,7 +55,7 @@ def _header_bar(slide):
   tf.clear()
   p1 = tf.paragraphs[0]
   p1.text = COMP_LINE1
-  p1.font.size = Pt(11)
+  p1.font.size = Pt(10)
   p1.font.bold = True
   p1.font.color.rgb = WHITE
   p2 = tf.add_paragraph()
@@ -114,9 +113,10 @@ def _bullets(slide, items: list[str], top=1.45, size=15, width=8.9):
 
 def _content_slide(prs, title: str):
   slide = _slide(prs)
+  sw, _ = _slide_size_inches(prs)
   _bg_white(slide)
-  _header_bar(slide)
-  _title(slide, title)
+  _header_bar(slide, sw)
+  _title(slide, title, top=0.62, size=24)
   return slide
 
 
@@ -133,42 +133,90 @@ def _fit_image_inches(path: Path, max_w: float, max_h: float) -> tuple[float, fl
 
 
 def _screenshot_slide(prs, title: str, image_file: str, caption: str = ""):
-  """插入答辩截图：标题在上、图片居中、说明在底，避免与标题重叠。"""
+  """截图页：16:9 画布内标题 + 居中配图 + 底注，按实际幻灯片高度计算留白。"""
   slide = _slide(prs)
+  sw, sh = _slide_size_inches(prs)
+  content_w = sw - 2 * MARGIN_X_IN
   _bg_white(slide)
-  _header_bar(slide)
+  _header_bar(slide, sw)
+
+  title_top = HEADER_H_IN + 0.06
+  title_h = 0.42
+  caption_h = 0.38 if caption else 0.0
+  caption_gap = 0.08
+  img_area_top = title_top + title_h + 0.06
+  img_area_bottom = sh - caption_h - caption_gap - 0.12
+  img_max_h = max(0.5, img_area_bottom - img_area_top)
+  img_max_w = content_w
 
   path = ASSETS / image_file
   if not path.exists():
-    _title(slide, title, top=SHOT_TITLE_TOP, size=22, height=SHOT_TITLE_H)
-    _paragraph(slide, f"[请将截图放入 docs/assets/{image_file}]", top=2.0, size=14)
+    _title(
+      slide,
+      title,
+      top=title_top,
+      size=20,
+      height=title_h,
+      width=content_w,
+      left=MARGIN_X_IN,
+      center=True,
+    )
+    _paragraph(slide, f"[请将截图放入 docs/assets/{image_file}]", top=img_area_top + 0.2, size=14)
     return slide
 
-  img_w, img_h = _fit_image_inches(path, SHOT_IMG_MAX_W, SHOT_IMG_MAX_H)
-  left = (SLIDE_W - img_w) / 2
-  slide.shapes.add_picture(str(path), Inches(left), Inches(SHOT_IMG_TOP), width=Inches(img_w), height=Inches(img_h))
+  img_w, img_h = _fit_image_inches(path, img_max_w, img_max_h)
+  left = MARGIN_X_IN + (content_w - img_w) / 2
+  top = img_area_top + (img_max_h - img_h) / 2
+
+  # 浅底衬框，避免截图“贴边悬空”
+  pad = 0.06
+  frame = slide.shapes.add_shape(
+    1,
+    Inches(left - pad),
+    Inches(top - pad),
+    Inches(img_w + 2 * pad),
+    Inches(img_h + 2 * pad),
+  )
+  frame.fill.solid()
+  frame.fill.fore_color.rgb = LIGHT_BLUE
+  frame.line.color.rgb = RGBColor(180, 195, 220)
+  frame.line.width = Pt(0.75)
+
+  slide.shapes.add_picture(str(path), Inches(left), Inches(top), width=Inches(img_w))
 
   if caption:
-    box = slide.shapes.add_textbox(Inches(0.4), Inches(SHOT_CAPTION_TOP), Inches(9.2), Inches(0.55))
+    cap_top = img_area_bottom + caption_gap * 0.35
+    box = slide.shapes.add_textbox(Inches(MARGIN_X_IN), Inches(cap_top), Inches(content_w), Inches(caption_h))
     tf = box.text_frame
     tf.word_wrap = True
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     p = tf.paragraphs[0]
     p.text = caption
-    p.font.size = Pt(10)
+    p.font.size = Pt(9)
     p.font.color.rgb = GRAY
     p.alignment = PP_ALIGN.CENTER
 
-  # 标题置于最上层，避免被图片遮挡
-  _title(slide, title, top=SHOT_TITLE_TOP, size=21, height=SHOT_TITLE_H, width=9.2, left=0.4)
+  _title(
+    slide,
+    title,
+    top=title_top,
+    size=19,
+    height=title_h,
+    width=content_w,
+    left=MARGIN_X_IN,
+    center=True,
+  )
   return slide
 
 
 def _part_divider(prs, part: str, subtitle: str):
   slide = _slide(prs)
+  sw, sh = _slide_size_inches(prs)
   _bg_white(slide)
-  _header_bar(slide)
-  _title(slide, part, top=2.0, size=32, center=True)
-  _title(slide, subtitle, top=2.85, size=22, color=DARK, center=True)
+  _header_bar(slide, sw)
+  mid = sh / 2
+  _title(slide, part, top=mid - 0.55, size=30, center=True)
+  _title(slide, subtitle, top=mid + 0.05, size=20, color=DARK, center=True)
 
 
 def _compare_block(slide, left_title, left_items, right_title, right_items):
@@ -244,32 +292,33 @@ def _innovation_table(slide, rows: list[tuple[str, str]]):
 
 def main():
   prs = Presentation()
-  prs.slide_width = Inches(10)
-  prs.slide_height = Inches(5.625)
+  prs.slide_width = Inches(SLIDE_W_IN)
+  prs.slide_height = Inches(SLIDE_H_IN)
+  sw, sh = _slide_size_inches(prs)
 
   # ===== 封面 =====
   slide = _slide(prs)
   _bg_white(slide)
-  _header_bar(slide)
-  _title(slide, "CareCompanion", top=1.6, size=36, center=True, color=DARK)
+  _header_bar(slide, sw)
+  _title(slide, "CareCompanion", top=1.15, size=34, center=True, color=DARK)
   _title(
     slide,
     "智能养老人形陪伴机器人系统",
-    top=2.35,
-    size=22,
+    top=1.78,
+    size=21,
     center=True,
     color=BLACK,
   )
   _paragraph(
     slide,
-    "第一部分\n\n「感知—决策—执行」一体化的居家养老安全陪伴平台",
-    top=3.0,
-    size=18,
-    width=8.0,
+    "「感知—决策—执行」一体化的居家养老安全陪伴平台",
+    top=2.45,
+    size=16,
+    width=8.2,
     bold=True,
   )
   for i, t in enumerate([COMP_LINE1, COMP_LINE2]):
-    box = slide.shapes.add_textbox(Inches(0.55), Inches(4.85 + i * 0.28), Inches(8.9), Inches(0.3))
+    box = slide.shapes.add_textbox(Inches(0.55), Inches(sh - 0.95 + i * 0.26), Inches(8.9), Inches(0.3))
     box.text_frame.text = t
     box.text_frame.paragraphs[0].font.size = Pt(11)
     box.text_frame.paragraphs[0].font.color.rgb = GRAY
@@ -447,7 +496,7 @@ def main():
       ("单元测试 + 无头压测", "pytest 全部通过"),
     ],
   )
-  _paragraph(slide, "详见 data/evaluation/results/fall_eval_report.json", top=4.35, size=11)
+  _paragraph(slide, "详见 data/evaluation/results/fall_eval_report.json", top=4.05, size=11)
 
   slide = _content_slide(prs, "开源与知识产权")
   _bullets(
@@ -507,15 +556,15 @@ def main():
   # 致谢
   slide = _slide(prs)
   _bg_white(slide)
-  _header_bar(slide)
-  box = slide.shapes.add_textbox(Inches(0.55), Inches(2.2), Inches(8.9), Inches(1.2))
+  _header_bar(slide, sw)
+  box = slide.shapes.add_textbox(Inches(0.55), Inches(sh / 2 - 0.55), Inches(8.9), Inches(1.0))
   box.text_frame.text = "敬请批评指正"
   p = box.text_frame.paragraphs[0]
-  p.font.size = Pt(36)
+  p.font.size = Pt(32)
   p.font.bold = True
   p.font.color.rgb = DARK
   p.alignment = PP_ALIGN.CENTER
-  sub = slide.shapes.add_textbox(Inches(0.55), Inches(3.2), Inches(8.9), Inches(0.6))
+  sub = slide.shapes.add_textbox(Inches(0.55), Inches(sh / 2 + 0.35), Inches(8.9), Inches(0.5))
   sub.text_frame.text = "CareCompanion 团队 · 感谢各位评委老师"
   sub.text_frame.paragraphs[0].font.size = Pt(16)
   sub.text_frame.paragraphs[0].font.color.rgb = GRAY
