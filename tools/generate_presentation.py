@@ -11,6 +11,7 @@ from pptx.util import Inches, Pt
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "答辩_CareCompanion.pptx"
+ASSETS = ROOT / "docs" / "assets"
 
 # 国赛常见：白底 + 深蓝标题条
 WHITE = RGBColor(255, 255, 255)
@@ -93,6 +94,24 @@ def _content_slide(prs, title: str):
   _bg_white(slide)
   _header_bar(slide)
   _title(slide, title)
+  return slide
+
+
+def _screenshot_slide(prs, title: str, image_file: str, caption: str = ""):
+  """插入答辩截图（置于 docs/assets/）。"""
+  slide = _content_slide(prs, title)
+  path = ASSETS / image_file
+  if not path.exists():
+    _paragraph(slide, f"[请将截图放入 docs/assets/{image_file}]", top=2.0, size=14)
+    return slide
+  slide.shapes.add_picture(str(path), Inches(0.32), Inches(1.12), width=Inches(9.35))
+  if caption:
+    box = slide.shapes.add_textbox(Inches(0.32), Inches(5.05), Inches(9.35), Inches(0.45))
+    p = box.text_frame.paragraphs[0]
+    p.text = caption
+    p.font.size = Pt(11)
+    p.font.color.rgb = GRAY
+    p.alignment = PP_ALIGN.CENTER
   return slide
 
 
@@ -297,11 +316,17 @@ def main():
     slide,
     [
       "对话：文本情感词典 + 视觉情绪标签融合；可插拔 LLM（默认离线 Mock）",
-      "示例：「最近有点孤独」→ 温暖安抚 + speak + gesture",
-      "紧急：alert_sound → speak → call_emergency → raise_hand",
-      "EmergencyNotifier：家属 App 推送 / 短信备份 / 本地告警（日志可审计）",
+      "紧急链路：alert_sound → speak → call_emergency → raise_hand",
+      "EmergencyNotifier：家属 App / 短信 / 本地告警（可审计日志）",
     ],
-    size=14,
+    top=1.35,
+    size=13,
+  )
+  _screenshot_slide(
+    prs,
+    "（界面）情感倾诉交互",
+    "ppt_emotion_input.png",
+    "老人输入「最近有点孤独，睡不太好」→ 系统识别情绪低落并生成安抚话术",
   )
 
   slide = _content_slide(prs, "数据处理与决策流程")
@@ -319,17 +344,47 @@ def main():
 
   _part_divider(prs, "第三部分", "系统实现 · 评测 · 演示")
 
-  slide = _content_slide(prs, "Web 控制台与视觉演示")
+  slide = _content_slide(prs, "Web 控制台（CareCompanion）")
   _bullets(
     slide,
     [
-      "FastAPI + 现代化 Web 前端，浏览器即可答辩演示",
-      "功能：感知调节 · 实时风险仪表盘 · 对话日志 · 机器人指令流",
-      "摄像头：打开 → 分析当前帧 → MediaPipe 骨架叠加",
-      "一键剧本：日常监测 → 老人倾诉 → 跌倒 → 紧急呼叫",
-      "启动：bash scripts/run_web.sh  →  http://localhost:8765",
+      "访问地址：http://localhost:8765（bash scripts/run_web.sh）",
+      "技术栈：FastAPI + 浏览器前端，支持答辩现场演示",
+      "以下截图为实际运行界面（2026-05-27 答辩预演录制）",
     ],
-    size=14,
+    top=1.35,
+    size=13,
+  )
+
+  _screenshot_slide(
+    prs,
+    "系统界面：老人倾诉场景（演示剧本）",
+    "ppt_full_dashboard.png",
+    "演示场景「老人倾诉」· 风险 0.23 · 机器人主动安抚回复",
+  )
+  _screenshot_slide(
+    prs,
+    "系统界面：风险决策仪表盘",
+    "ppt_risk_panel.png",
+    "多模态融合输出：风险分数、因素、机器人回应及四项监测指标",
+  )
+  _screenshot_slide(
+    prs,
+    "系统界面：紧急状态监测",
+    "ppt_header_perception.png",
+    "状态机进入「紧急」· 感知输入与 MediaPipe 视觉模块",
+  )
+  _screenshot_slide(
+    prs,
+    "系统界面：跌倒紧急对话日志",
+    "ppt_chat_emergency.png",
+    "演示完成：跌倒紧急流程已成功触发 · 多次紧急安抚语音",
+  )
+  _screenshot_slide(
+    prs,
+    "系统界面：机器人指令流",
+    "ppt_robot_commands.png",
+    "告警音 → 语音 → 紧急呼叫（跌倒事件）→ 举手手势，全链路可追溯",
   )
 
   slide = _content_slide(prs, "实验评测结果")
@@ -351,6 +406,7 @@ def main():
     slide,
     [
       "GitHub 开源：https://github.com/FBB123571/ElderCare-Humanoid-Platform",
+      "答辩演示：http://localhost:8765（现场端口转发）",
       "软件名称建议：CareCompanion 智能养老人形陪伴机器人系统 V1.0",
       "核心代码：care_companion/ · web/ · scripts/ · tests/",
       "文档：技术报告 · 架构说明 · 部署指南 · 竞赛答辩要点",
