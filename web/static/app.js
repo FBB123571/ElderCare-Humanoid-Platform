@@ -239,26 +239,7 @@ async function startCamera() {
   }
 }
 
-async function analyzeCameraFrame() {
-  const video = $("camVideo");
-  const canvas = $("camCanvas");
-  if (!video.videoWidth) {
-    $("visionStatus").textContent = "请先打开摄像头";
-    return;
-  }
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
-  const fd = new FormData();
-  fd.append("file", blob, "frame.jpg");
-  $("visionStatus").textContent = "分析中…";
-  const res = await fetch("/api/vision/analyze", { method: "POST", body: fd });
-  const data = await res.json();
-  if (!data.ok) {
-    $("visionStatus").textContent = data.error || "分析失败";
-    return;
-  }
+function applyVisionResult(data) {
   const m = data.metrics;
   $("aspect").value = Math.round(m.aspect_ratio * 100);
   $("dy").value = Math.round(Math.max(-100, Math.min(50, m.dy * 100)));
@@ -266,10 +247,67 @@ async function analyzeCameraFrame() {
   if (data.preview_jpeg_b64) {
     $("visionPreview").src = `data:image/jpeg;base64,${data.preview_jpeg_b64}`;
     $("visionPreview").classList.remove("hidden");
-    video.classList.add("hidden");
+    $("camVideo").classList.add("hidden");
   }
-  const detected = m.fall?.detected ? "是" : "否";
-  $("visionStatus").textContent = `姿态宽高比 ${m.aspect_ratio.toFixed(2)} · 跌倒 ${detected}`;
+  const status = $("visionStatus");
+  status.classList.toggle("warn", !m.visible);
+  const fallTxt = m.fall?.detected ? "是" : "否";
+  if (!m.visible) {
+    status.textContent = `${data.message || m.fall?.reason || "未检测到人体"} · 请换一张含肩、髋的上半身照片`;
+  } else {
+    status.textContent = `${data.message || "分析完成"} · 跌倒 ${fallTxt}`;
+  }
+}
+
+async function analyzeVisionBlob(blob, filename = "upload.jpg") {
+  const fd = new FormData();
+  fd.append("file", blob, filename);
+  $("visionStatus").classList.remove("warn");
+  $("visionStatus").textContent = "分析中…";
+  const res = await fetch("/api/vision/analyze", { method: "POST", body: fd });
+  const data = await res.json();
+  if (!data.ok) {
+    $("visionStatus").classList.add("warn");
+    $("visionStatus").textContent = data.error || "分析失败";
+    return;
+  }
+  applyVisionResult(data);
+}
+
+async function analyzeCameraFrame() {
+  const video = $("camVideo");
+  const canvas = $("camCanvas");
+  if (!video.videoWidth) {
+    $("visionStatus").textContent = "请先打开摄像头，或使用「上传照片分析」";
+    return;
+  }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  await analyzeVisionBlob(blob, "frame.jpg");
+}
+
+async function analyzeUploadedFile(file) {
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    $("visionStatus").textContent = "请选择 JPG / PNG / WebP 图片";
+    return;
+  }
+  await analyzeVisionBlob(file, file.name);
+}
+
+async function loadSamplePose() {
+  $("visionStatus").textContent = "加载演示样图…";
+  const res = await fetch("/static/samples/pose_demo.jpg");
+  if (!res.ok) {
+    $("visionStatus").classList.add("warn");
+    $("visionStatus").textContent =
+      "暂无内置样图：请将含上半身的照片放到 web/static/samples/pose_demo.jpg，或直接用「上传照片分析」";
+    return;
+  }
+  const blob = await res.blob();
+  await analyzeVisionBlob(blob, "pose_demo.jpg");
 }
 
 async function doTick() {
@@ -356,6 +394,12 @@ $("btnDemo").addEventListener("click", runDemo);
 $("btnReset").addEventListener("click", doReset);
 $("btnCamStart").addEventListener("click", startCamera);
 $("btnCamAnalyze").addEventListener("click", analyzeCameraFrame);
+$("visionFile").addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  analyzeUploadedFile(file);
+  e.target.value = "";
+});
+$("btnSamplePose").addEventListener("click", loadSamplePose);
 
 $("userText").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {

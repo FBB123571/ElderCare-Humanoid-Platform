@@ -169,9 +169,17 @@ body {
   max-height: 180px; object-fit: cover; border: 1px solid var(--border);
 }
 .cam-preview.hidden, .hidden { display: none !important; }
-.vision-actions { display: flex; gap: 8px; margin-top: 8px; }
+.vision-actions {
+  display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;
+}
+.vision-upload-btn { cursor: pointer; margin: 0; }
+.vision-upload-btn input { display: none; }
+.vision-hint {
+  font-size: 0.72rem; color: var(--muted); margin: 8px 0 0; line-height: 1.45;
+}
 .btn.sm { padding: 8px 10px; font-size: 0.78rem; }
-.vision-status { font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
+.vision-status { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+.vision-status.warn { color: #fbbf24; }
 
 .slider-group { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; }
 .slider-row { display: flex; flex-direction: column; gap: 6px; }

@@ -14,6 +14,12 @@ source .venv/bin/activate
 pip install -U pip
 pip install -r requirements.txt
 
+if bash scripts/download_mediapipe_models.sh 2>/dev/null; then
+  :
+else
+  echo "⚠️  姿态模型未下载（可稍后执行: bash scripts/download_mediapipe_models.sh）"
+fi
+
 echo ""
 echo "✅ 依赖安装完成。接下来可运行："
 echo "   bash scripts/run_web.sh        # Web 控制台（推荐，浏览器访问）"

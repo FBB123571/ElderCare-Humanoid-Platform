@@ -53,11 +53,18 @@ class CareSession:
       "visible": metrics.visible,
       "fall": _serialize(fall_r),
     }
+    if metrics.visible:
+      message = f"已检测到人体骨架 · 宽高比 {metrics.aspect_ratio:.2f}"
+    else:
+      message = fall_r.reason or "未检测到人体（请上传含头、肩、髋、手臂的上半身照片）"
+
     return {
       "ok": True,
       "metrics": self.last_vision,
       "preview_jpeg_b64": preview_b64,
-      "mediapipe_available": metrics.visible or fall_r.reason != "mediapipe 未安装",
+      "message": message,
+      "mediapipe_available": self.pose.mediapipe_ready()
+      or fall_r.reason not in ("mediapipe 未安装", "缺少姿态模型，请运行 bash scripts/download_mediapipe_models.sh"),
     }
 
   def tick_with_vision(self, payload: dict, use_vision: bool = False) -> dict:
