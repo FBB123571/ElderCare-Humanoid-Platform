@@ -40,6 +40,7 @@ function readPayload() {
     skeleton_dy: +$("dy").value / 100,
     emotion: $("emotion").value,
     user_text: $("userText").value.trim(),
+    use_vision: $("useVision").checked,
   };
 }
 
@@ -223,6 +224,54 @@ async function refreshLogs() {
   robot.scrollTop = robot.scrollHeight;
 }
 
+let camStream = null;
+
+async function startCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    const video = $("camVideo");
+    video.srcObject = camStream;
+    video.classList.remove("hidden");
+    $("visionPreview").classList.add("hidden");
+    $("visionStatus").textContent = "摄像头已开启，点击「分析当前帧」提取姿态";
+  } catch (e) {
+    $("visionStatus").textContent = `无法打开摄像头：${e.message}`;
+  }
+}
+
+async function analyzeCameraFrame() {
+  const video = $("camVideo");
+  const canvas = $("camCanvas");
+  if (!video.videoWidth) {
+    $("visionStatus").textContent = "请先打开摄像头";
+    return;
+  }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  const fd = new FormData();
+  fd.append("file", blob, "frame.jpg");
+  $("visionStatus").textContent = "分析中…";
+  const res = await fetch("/api/vision/analyze", { method: "POST", body: fd });
+  const data = await res.json();
+  if (!data.ok) {
+    $("visionStatus").textContent = data.error || "分析失败";
+    return;
+  }
+  const m = data.metrics;
+  $("aspect").value = Math.round(m.aspect_ratio * 100);
+  $("dy").value = Math.round(Math.max(-100, Math.min(50, m.dy * 100)));
+  updateLabels();
+  if (data.preview_jpeg_b64) {
+    $("visionPreview").src = `data:image/jpeg;base64,${data.preview_jpeg_b64}`;
+    $("visionPreview").classList.remove("hidden");
+    video.classList.add("hidden");
+  }
+  const detected = m.fall?.detected ? "是" : "否";
+  $("visionStatus").textContent = `姿态宽高比 ${m.aspect_ratio.toFixed(2)} · 跌倒 ${detected}`;
+}
+
 async function doTick() {
   $("btnTick").disabled = true;
   try {
@@ -305,6 +354,8 @@ document.querySelectorAll(".emotion-btn").forEach((btn) => {
 $("btnTick").addEventListener("click", doTick);
 $("btnDemo").addEventListener("click", runDemo);
 $("btnReset").addEventListener("click", doReset);
+$("btnCamStart").addEventListener("click", startCamera);
+$("btnCamAnalyze").addEventListener("click", analyzeCameraFrame);
 
 $("userText").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {

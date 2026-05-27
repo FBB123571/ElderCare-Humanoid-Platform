@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -31,6 +31,7 @@ class TickRequest(BaseModel):
   skeleton_dy: float = Field(0.0, ge=-1.5, le=1.0)
   emotion: str = "neutral"
   user_text: str = ""
+  use_vision: bool = False
 
 
 @app.get("/")
@@ -61,7 +62,20 @@ def status():
 
 @app.post("/api/tick")
 def tick(body: TickRequest):
-  return SESSION.tick(body.model_dump())
+  payload = body.model_dump()
+  use_vision = payload.pop("use_vision", False)
+  return SESSION.tick_with_vision(payload, use_vision=use_vision)
+
+
+@app.post("/api/vision/analyze")
+async def vision_analyze(file: UploadFile = File(...)):
+  data = await file.read()
+  return SESSION.analyze_vision(data)
+
+
+@app.get("/api/vision/last")
+def vision_last():
+  return {"ok": SESSION.last_vision is not None, "metrics": SESSION.last_vision}
 
 
 @app.get("/api/demo/stream")

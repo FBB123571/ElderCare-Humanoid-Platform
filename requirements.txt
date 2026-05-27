@@ -6,9 +6,10 @@ Pillow>=10.0
 matplotlib>=3.7
 fastapi>=0.110
 uvicorn[standard]>=0.27
-
-# 可选：姿态增强跌倒检测
-# mediapipe>=0.10
+python-multipart>=0.0.9
+mediapipe>=0.10.9
+python-pptx>=0.6.23
+pytest>=7.0
 
 # 可选：真实大模型
 # openai>=1.0

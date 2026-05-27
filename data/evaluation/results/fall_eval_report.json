@@ -1,0 +1,57 @@
+{
+  "metrics": {
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "tn": 4,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "accuracy": 1.0,
+    "n_scenarios": 6
+  },
+  "details": [
+    {
+      "name": "standing_normal",
+      "label": "normal",
+      "pred": "normal",
+      "detected": false,
+      "max_score": 0.0
+    },
+    {
+      "name": "walking_normal",
+      "label": "normal",
+      "pred": "normal",
+      "detected": false,
+      "max_score": 0.0
+    },
+    {
+      "name": "sit_down",
+      "label": "near_fall",
+      "pred": "normal",
+      "detected": false,
+      "max_score": 0.0
+    },
+    {
+      "name": "sudden_fall",
+      "label": "fall",
+      "pred": "fall",
+      "detected": true,
+      "max_score": 0.8
+    },
+    {
+      "name": "lying_still",
+      "label": "fall",
+      "pred": "fall",
+      "detected": true,
+      "max_score": 0.55
+    },
+    {
+      "name": "bend_pickup",
+      "label": "near_fall",
+      "pred": "normal",
+      "detected": false,
+      "max_score": 0.0
+    }
+  ]
+}

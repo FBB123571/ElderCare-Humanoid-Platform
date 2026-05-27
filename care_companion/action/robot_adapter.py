@@ -4,6 +4,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 
+from care_companion.action.emergency_notifier import EmergencyNotifier
 from care_companion.core.events import RobotAction, RobotCommand
 
 logger = logging.getLogger(__name__)
@@ -20,13 +21,20 @@ class RobotAdapter(ABC):
 class SimulationAdapter(RobotAdapter):
   """桌面仿真 / 日志输出。"""
 
-  def __init__(self, on_action=None):
+  def __init__(self, on_action=None, notifier: EmergencyNotifier | None = None):
     self._on_action = on_action
+    self.notifier = notifier or EmergencyNotifier()
     self.history: list[dict] = []
 
   def execute(self, action: RobotAction) -> None:
     record = {"command": action.command.value, **action.payload}
     self.history.append(record)
+    if action.command == RobotCommand.CALL_EMERGENCY:
+      rec = self.notifier.trigger(
+        action.payload.get("reasons", []),
+        {"source": "simulation", **action.payload},
+      )
+      record["emergency_record"] = rec.__dict__
     logger.info("[SIM] %s", record)
     if self._on_action:
       self._on_action(record)

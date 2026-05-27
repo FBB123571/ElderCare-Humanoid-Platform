@@ -65,6 +65,24 @@
           </button>
         </div>
 
+        <div class="vision-panel">
+          <div class="vision-head">
+            <span>📷 摄像头视觉（MediaPipe）</span>
+            <label class="toggle">
+              <input type="checkbox" id="useVision" />
+              推理时融合视觉
+            </label>
+          </div>
+          <video id="camVideo" class="cam-preview" autoplay playsinline muted></video>
+          <canvas id="camCanvas" class="hidden"></canvas>
+          <img id="visionPreview" class="cam-preview hidden" alt="骨架预览" />
+          <div class="vision-actions">
+            <button type="button" id="btnCamStart" class="btn ghost sm">打开摄像头</button>
+            <button type="button" id="btnCamAnalyze" class="btn ghost sm">分析当前帧</button>
+          </div>
+          <p id="visionStatus" class="vision-status">未启动视觉分析</p>
+        </div>
+
         <div class="slider-group">
           <div class="slider-row">
             <div class="slider-label"><span>❤️ 心率</span><strong id="hrVal">72</strong><small>bpm</small></div>

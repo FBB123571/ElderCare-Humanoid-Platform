@@ -8,7 +8,9 @@
 
 - 核心：`care_companion/` 全部 `.py`
 - 界面：`simulation/desktop_gui.py`
-- 入口：`scripts/run_simulation.py`、`scripts/run_headless_demo.py`
+- 入口：`scripts/run_simulation.py`、`scripts/run_headless_demo.py`、`scripts/run_web.py`
+- 视觉：`care_companion/perception/pose_pipeline.py`
+- Web：`web/server.py`、`web/static/`
 
 ## 文档材料
 

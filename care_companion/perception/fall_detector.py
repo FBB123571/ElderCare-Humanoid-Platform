@@ -43,7 +43,10 @@ class FallDetector:
       score += 0.2
       reasons.append("倒地后静止")
 
+    # 快速跌倒：高分 + 下落/躺倒；慢速倒地：躺倒且静止超过阈值（养老场景常见）
     detected = score >= 0.7 and (lying or fast_drop)
+    if lying and self._still_time >= self.still_seconds:
+      detected = score >= 0.55
     self._prev_dy = dy
     reason = "、".join(reasons) if reasons else "正常"
     return FallResult(score=min(score, 1.0), detected=detected, reason=reason)

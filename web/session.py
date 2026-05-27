@@ -4,10 +4,13 @@ import asyncio
 import time
 from dataclasses import asdict, is_dataclass
 
+import base64
+
 from care_companion.action.robot_adapter import SimulationAdapter
 from care_companion.core.config import load_config
 from care_companion.core.events import PerceptionFrame
 from care_companion.core.orchestrator import CareOrchestrator
+from care_companion.perception.pose_pipeline import PosePipeline
 from simulation.scenarios import demo_scenarios
 
 
@@ -26,9 +29,45 @@ class CareSession:
     self.reset()
 
   def reset(self) -> None:
+    self.cfg = load_config()
     self.adapter = SimulationAdapter()
-    self.orch = CareOrchestrator(load_config(), self.adapter)
+    self.orch = CareOrchestrator(self.cfg, self.adapter)
+    self.pose = PosePipeline(self.cfg.get("fall", {}))
     self.chat_log: list[dict] = []
+    self.last_vision: dict | None = None
+
+  def analyze_vision(self, image_bytes: bytes, dt: float = 0.1) -> dict:
+    img = self.pose.decode_upload(image_bytes)
+    if img is None:
+      return {"ok": False, "error": "无法解码图像"}
+    metrics, fall_r, annotated = self.pose.analyze_bgr(img, dt)
+    preview_b64 = None
+    if annotated is not None:
+      import cv2
+
+      _, buf = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+      preview_b64 = base64.b64encode(buf).decode("ascii")
+    self.last_vision = {
+      "aspect_ratio": metrics.aspect_ratio,
+      "dy": metrics.dy,
+      "visible": metrics.visible,
+      "fall": _serialize(fall_r),
+    }
+    return {
+      "ok": True,
+      "metrics": self.last_vision,
+      "preview_jpeg_b64": preview_b64,
+      "mediapipe_available": metrics.visible or fall_r.reason != "mediapipe 未安装",
+    }
+
+  def tick_with_vision(self, payload: dict, use_vision: bool = False) -> dict:
+    if use_vision and self.last_vision:
+      payload = {
+        **payload,
+        "skeleton_aspect_ratio": self.last_vision["aspect_ratio"],
+        "skeleton_dy": self.last_vision["dy"],
+      }
+    return self.tick(payload)
 
   def tick(self, payload: dict) -> dict:
     user_text = (payload.get("user_text") or "").strip() or None
