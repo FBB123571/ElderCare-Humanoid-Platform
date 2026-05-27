@@ -559,6 +559,23 @@ def main():
     top=1.35,
   )
 
+  qr_path = ASSETS / "ppt_demo_qr.png"
+  if qr_path.exists():
+    slide = _content_slide(prs, "现场演示视频（扫码观看）")
+    qw, qh = _fit_image_inches(qr_path, 2.8, 2.8)
+    slide.shapes.add_picture(
+      str(qr_path),
+      Inches((sw - qw) / 2),
+      Inches(1.35),
+      width=Inches(qw),
+      height=Inches(qh),
+    )
+    cap = slide.shapes.add_textbox(Inches(0.55), Inches(4.15), Inches(8.9), Inches(0.5))
+    cap.text_frame.paragraphs[0].text = "请扫码观看 3～5 分钟系统演示录像"
+    cap.text_frame.paragraphs[0].font.size = Pt(14)
+    cap.text_frame.paragraphs[0].font.color.rgb = GRAY
+    cap.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+
   # 致谢
   slide = _slide(prs)
   _bg_white(slide)
