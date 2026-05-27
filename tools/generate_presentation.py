@@ -14,8 +14,6 @@ from pptx.util import Inches, Pt
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools.ppt_layout import (
-  BODY_BOTTOM,
-  BODY_H,
   CAPTION_H,
   COL_L,
   COL_L_W,
@@ -25,7 +23,6 @@ from tools.ppt_layout import (
   CONTENT_H,
   CONTENT_TOP,
   FOOTER_H,
-  GUTTER,
   HEADER_H,
   IMG_PAD,
   MARGIN,
@@ -34,6 +31,8 @@ from tools.ppt_layout import (
   SLIDE_W,
   TITLE_H,
   TITLE_TOP,
+  body_height,
+  ribbon_top,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -146,7 +145,7 @@ def _title(slide, text: str, *, center=False):
 
 
 def _ribbon(slide, text: str):
-  y = CONTENT_BOTTOM - RIBBON_H
+  y = ribbon_top()
   bar = slide.shapes.add_shape(1, Inches(COL_L), Inches(y), Inches(COL_L_W), Inches(RIBBON_H))
   bar.fill.solid()
   bar.fill.fore_color.rgb = DARK
@@ -158,10 +157,12 @@ def _ribbon(slide, text: str):
   _set_para_font(p, 11, bold=True, color=WHITE)
 
 
-def _bullets_panel(slide, items: list[str], *, highlights: list[int] | None = None, size: int = 13):
+def _bullets_panel(
+  slide, items: list[str], *, highlights: list[int] | None = None, size: int = 13, with_ribbon: bool = False,
+):
   highlights = highlights or []
   top = CONTENT_TOP
-  height = BODY_H
+  height = body_height(with_ribbon=with_ribbon)
 
   panel = slide.shapes.add_shape(1, Inches(COL_L), Inches(top), Inches(COL_L_W), Inches(height))
   panel.fill.solid()
@@ -211,30 +212,33 @@ def _place_figure(
   max_w: float,
   max_h: float,
   caption: str = "",
-  fill_ratio: float = 0.94,
+  fill_ratio: float = 1.0,
+  edge_to_edge: bool = False,
 ) -> None:
-  """在指定区域内等比居中放置配图（尽量填满但不裁切）。"""
+  """在指定区域内等比居中放置配图，尽量填满可视区。"""
   if not path.exists():
     return
+  cap_h = 0 if edge_to_edge else (CAPTION_H if caption else 0)
   box_w = max_w * fill_ratio
-  box_h = max_h * fill_ratio - (CAPTION_H if caption else 0)
+  box_h = (max_h - cap_h) * fill_ratio
   w, h = _fit_image(path, box_w, box_h)
   x = left + (max_w - w) / 2
-  y = top + (max_h - CAPTION_H - h) / 2 if caption else top + (max_h - h) / 2
+  y = top + (max_h - cap_h - h) / 2
 
-  pad = 0.08
-  frame = slide.shapes.add_shape(
-    1, Inches(x - pad), Inches(y - pad),
-    Inches(w + 2 * pad), Inches(h + 2 * pad + (CAPTION_H if caption else 0)),
-  )
-  frame.fill.solid()
-  frame.fill.fore_color.rgb = WHITE
-  frame.line.color.rgb = BORDER
-  frame.line.width = Pt(1.0)
+  pad = 0.03 if edge_to_edge else 0.05
+  if not edge_to_edge:
+    frame = slide.shapes.add_shape(
+      1, Inches(x - pad), Inches(y - pad),
+      Inches(w + 2 * pad), Inches(h + 2 * pad + (CAPTION_H if caption else 0)),
+    )
+    frame.fill.solid()
+    frame.fill.fore_color.rgb = WHITE
+    frame.line.color.rgb = BORDER
+    frame.line.width = Pt(0.8)
 
   slide.shapes.add_picture(str(path), Inches(x), Inches(y), width=Inches(w), height=Inches(h))
-  if caption:
-    cap = slide.shapes.add_textbox(Inches(left), Inches(y + h + 0.1), Inches(max_w), Inches(CAPTION_H))
+  if caption and not edge_to_edge:
+    cap = slide.shapes.add_textbox(Inches(left), Inches(y + h + 0.06), Inches(max_w), Inches(CAPTION_H))
     cp = cap.text_frame.paragraphs[0]
     cp.text = caption
     cp.alignment = PP_ALIGN.CENTER
@@ -263,20 +267,24 @@ def _slide_lr(
   footer_hint: str = "",
   key_takeaway: str = "",
 ):
+  has_ribbon = bool(key_takeaway)
   slide = _content_slide(prs, title, footer_hint)
   hi = [len(bullets) - 1] if highlight_last and bullets else []
-  _bullets_panel(slide, bullets, highlights=hi, size=bullet_size)
+  _bullets_panel(slide, bullets, highlights=hi, size=bullet_size, with_ribbon=has_ribbon)
 
   sub = DIAG / image if diagram else ASSETS / image
   if not sub.exists() and diagram:
     sub = ASSETS / image
 
   img_top = CONTENT_TOP + IMG_PAD
-  img_h = BODY_H - 2 * IMG_PAD
+  img_h = CONTENT_H - 2 * IMG_PAD
   cap = caption or ("理论框图" if diagram else "系统实拍")
-  _place_figure(slide, sub, left=COL_R, top=img_top, max_w=COL_R_W, max_h=img_h, caption=cap)
+  _place_figure(
+    slide, sub, left=COL_R, top=img_top, max_w=COL_R_W, max_h=img_h,
+    caption=cap, fill_ratio=1.0,
+  )
 
-  if key_takeaway:
+  if has_ribbon:
     _ribbon(slide, key_takeaway)
   return slide
 
@@ -293,7 +301,7 @@ def _slide_open_source(prs):
     ("演示录像", "docs/assets/demo_carecompanion.mp4"),
     ("软著", "申请中"),
   ]
-  card_h = (BODY_H - 0.1) / len(cards)
+  card_h = (body_height(with_ribbon=True) - 0.1) / len(cards)
   for i, (label, value) in enumerate(cards):
     y = CONTENT_TOP + 0.05 + i * card_h
     card = slide.shapes.add_shape(1, Inches(COL_L), Inches(y), Inches(COL_L_W), Inches(card_h - 0.08))
@@ -313,7 +321,7 @@ def _slide_open_source(prs):
   qr = ASSETS / "ppt_demo_qr.png"
   thumb = ASSETS / "ppt_full_dashboard.png"
   right_top = CONTENT_TOP + 0.08
-  right_h = BODY_H - 0.16
+  right_h = body_height(with_ribbon=True) - 0.16
   if qr.exists():
     _place_figure(slide, qr, left=COL_R + 0.15, top=right_top, max_w=2.0, max_h=2.0, caption="扫码访问", fill_ratio=1.0)
   if thumb.exists():
@@ -397,51 +405,58 @@ def _part_divider(prs, part: str, subtitle: str, preview: list[str], thumb: str 
   _header_bar(slide)
   _footer_bar(slide)
 
-  left_w = 5.85
-  main = slide.shapes.add_shape(1, Inches(0), Inches(HEADER_H), Inches(left_w), Inches(CONTENT_BOTTOM - HEADER_H))
+  left_w = 4.75
+  block_h = CONTENT_BOTTOM - HEADER_H
+  main = slide.shapes.add_shape(1, Inches(0), Inches(HEADER_H), Inches(left_w), Inches(block_h))
   main.fill.solid()
   main.fill.fore_color.rgb = DARK
   main.line.fill.background()
 
   num = part.replace("第", "").replace("部分", "")[:1]
-  circle = slide.shapes.add_shape(9, Inches(0.5), Inches(1.15), Inches(0.9), Inches(0.9))
+  circle = slide.shapes.add_shape(9, Inches(0.42), Inches(HEADER_H + 0.35), Inches(0.72), Inches(0.72))
   circle.fill.solid()
   circle.fill.fore_color.rgb = ACCENT
   circle.line.fill.background()
-  nb = slide.shapes.add_textbox(Inches(0.5), Inches(1.22), Inches(0.9), Inches(0.5))
+  nb = slide.shapes.add_textbox(Inches(0.42), Inches(HEADER_H + 0.42), Inches(0.72), Inches(0.45))
   np = nb.text_frame.paragraphs[0]
   np.text = num
   np.alignment = PP_ALIGN.CENTER
-  _set_para_font(np, 26, bold=True, color=WHITE)
+  _set_para_font(np, 22, bold=True, color=WHITE)
 
-  box = slide.shapes.add_textbox(Inches(0.45), Inches(2.15), Inches(5.2), Inches(0.55))
-  _set_para_font(box.text_frame.paragraphs[0], 28, bold=True, color=WHITE)
-  box.text_frame.paragraphs[0].text = part
+  ty = HEADER_H + 1.15
+  box = slide.shapes.add_textbox(Inches(0.38), Inches(ty), Inches(4.2), Inches(0.5))
+  p = box.text_frame.paragraphs[0]
+  p.text = part
+  _set_para_font(p, 24, bold=True, color=WHITE)
 
-  sub = slide.shapes.add_textbox(Inches(0.48), Inches(2.75), Inches(5.2), Inches(0.4))
-  _set_para_font(sub.text_frame.paragraphs[0], 14, color=RGBColor(191, 219, 254))
-  sub.text_frame.paragraphs[0].text = subtitle
+  sub = slide.shapes.add_textbox(Inches(0.4), Inches(ty + 0.52), Inches(4.2), Inches(0.38))
+  sp = sub.text_frame.paragraphs[0]
+  sp.text = subtitle
+  _set_para_font(sp, 12, color=RGBColor(191, 219, 254))
 
-  prev = slide.shapes.add_textbox(Inches(0.52), Inches(3.35), Inches(5.0), Inches(1.6))
-  tf = prev.text_frame
-  for i, line in enumerate(preview):
-    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-    p.text = f"▸  {line}"
-    _set_para_font(p, 13, color=RGBColor(226, 232, 240))
-    p.space_after = Pt(10)
+  chip_y = ty + 1.05
+  for line in preview:
+    chip = slide.shapes.add_shape(1, Inches(0.42), Inches(chip_y), Inches(4.0), Inches(0.42))
+    chip.fill.solid()
+    chip.fill.fore_color.rgb = RGBColor(30, 64, 130)
+    chip.line.color.rgb = RGBColor(100, 140, 200)
+    cb = slide.shapes.add_textbox(Inches(0.55), Inches(chip_y + 0.08), Inches(3.75), Inches(0.28))
+    cp = cb.text_frame.paragraphs[0]
+    cp.text = line
+    _set_para_font(cp, 11, color=RGBColor(226, 232, 240))
+    chip_y += 0.48
 
   pth = DIAG / thumb
+  right_w = SLIDE_W - left_w
+  right_bg = slide.shapes.add_shape(1, Inches(left_w), Inches(HEADER_H), Inches(right_w), Inches(block_h))
+  right_bg.fill.solid()
+  right_bg.fill.fore_color.rgb = LIGHT_BLUE
+  right_bg.line.fill.background()
   if pth.exists():
-    right_bg = slide.shapes.add_shape(
-      1, Inches(left_w), Inches(HEADER_H),
-      Inches(SLIDE_W - left_w), Inches(CONTENT_BOTTOM - HEADER_H),
-    )
-    right_bg.fill.solid()
-    right_bg.fill.fore_color.rgb = LIGHT_BLUE
-    right_bg.line.fill.background()
     _place_figure(
-      slide, pth, left=left_w + 0.15, top=CONTENT_TOP,
-      max_w=SLIDE_W - left_w - 0.3, max_h=CONTENT_H, caption="本章核心示意", fill_ratio=0.95,
+      slide, pth, left=left_w + IMG_PAD, top=CONTENT_TOP + IMG_PAD,
+      max_w=right_w - 2 * IMG_PAD, max_h=CONTENT_H - 2 * IMG_PAD,
+      caption="", edge_to_edge=True, fill_ratio=1.0,
     )
 
 
@@ -451,7 +466,7 @@ def _screenshot_slide(prs, title: str, image_file: str, caption: str = ""):
   _place_figure(
     slide, path,
     left=MARGIN, top=CONTENT_TOP + 0.05,
-    max_w=SLIDE_W - 2 * MARGIN, max_h=BODY_H - 0.05,
+    max_w=SLIDE_W - 2 * MARGIN, max_h=CONTENT_H - 0.05,
     caption=caption, fill_ratio=0.97,
   )
 
@@ -512,7 +527,7 @@ def _slide_qr_dual(prs):
     _place_figure(slide, qr, left=COL_R + 0.1, top=CONTENT_TOP + 0.2, max_w=2.1, max_h=2.1, caption="仓库二维码", fill_ratio=1.0)
   if demo.exists():
     _place_figure(slide, demo, left=COL_R + 2.35, top=CONTENT_TOP + 0.15,
-                  max_w=COL_R_W - 2.45, max_h=BODY_H - 0.2, caption="演示界面", fill_ratio=0.96)
+                  max_w=COL_R_W - 2.45, max_h=CONTENT_H - 0.2, caption="演示界面", fill_ratio=1.0)
 
 
 def _ensure_qr_code() -> None:
