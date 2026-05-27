@@ -93,6 +93,23 @@ def _load_eval() -> dict:
   return {"metrics": {}, "details": []}
 
 
+def _multiline(ax, x: float, y: float, lines: list[str], *, fontsize=8, color=None, fontweight=None):
+  """在坐标轴上绘制多行文字（避免 \\n 显示为字面量）。"""
+  color = color or C0
+  n = len(lines)
+  step = 0.13
+  y0 = y + (n - 1) * step / 2
+  for i, line in enumerate(lines):
+    ax.text(x, y0 - i * step, line, ha="center", va="center", fontsize=fontsize,
+            color=color, fontweight=fontweight)
+
+
+def _diamond(ax, cx: float, cy: float, lines: list[str], *, w=0.62, h=0.50):
+  pts = [(cx, cy + h), (cx + w, cy), (cx, cy - h), (cx - w, cy)]
+  ax.add_patch(Polygon(pts, closed=True, fc="#ebf8ff", ec=C2, lw=1.5, zorder=2))
+  _multiline(ax, cx, cy, lines, fontsize=8)
+
+
 # ── 1. 目录：水平时间轴 ─────────────────────────────────────────
 def fig_outline_timeline() -> Path:
   fig = _fig()
@@ -184,27 +201,35 @@ def fig_compare_table() -> Path:
   return _save(fig, "compare_table.png")
 
 
-# ── 4. 架构：分层块图（灰底+色条） ─────────────────────────────
+# ── 4. 架构：分层 + 右侧调度竖条（不遮挡层） ───────────────────
 def fig_architecture_layers() -> Path:
   fig = _fig()
-  ax = fig.add_axes([0, 0, 1, 1])
+  ax = fig.add_axes([0.04, 0.06, 0.92, 0.88])
   ax.set_xlim(0, 5)
-  ax.set_ylim(0, 3.9)
+  ax.set_ylim(0, 3.6)
   ax.axis("off")
+  lx, lw = 0.15, 3.35
   layers = [
-    ("L4 交互层", "Web / FastAPI / GUI", C3, 3.05),
-    ("L3 认知层", "RiskFusion · Dialogue · Planner", C2, 2.25),
-    ("L2 感知层", "FallDetector · Emotion · Vision", C1, 1.45),
-    ("L1 执行层", "RobotAdapter · ROS2 / 仿真", C0, 0.65),
+    ("L4 交互层", "Web / FastAPI / GUI", C3, 2.85),
+    ("L3 认知层", "RiskFusion · Dialogue · Planner", C2, 2.05),
+    ("L2 感知层", "FallDetector · Emotion · Vision", C1, 1.25),
+    ("L1 执行层", "RobotAdapter · ROS2 / 仿真", C0, 0.45),
   ]
+  bh = 0.58
   for title, sub, col, y in layers:
-    ax.add_patch(FancyBboxPatch((0.35, y), 4.3, 0.62, boxstyle="round,pad=0.02", fc="#f7fafc", ec=col, lw=2))
-    ax.add_patch(Rectangle((0.35, y), 0.12, 0.62, fc=col, ec="none"))
-    ax.text(0.55, y + 0.38, title, fontsize=10, fontweight="bold", va="center", color=C0)
-    ax.text(0.55, y + 0.18, sub, fontsize=8.5, va="center", color=C_GRAY)
-  ax.add_patch(FancyBboxPatch((1.55, 0.08), 1.9, 0.42, boxstyle="round", fc=C0, ec="white", lw=1.5))
-  ax.text(2.5, 0.29, "CareOrchestrator", ha="center", va="center", fontsize=9, color="white", fontweight="bold")
-  ax.text(2.5, 3.62, "Fig.1 系统分层架构", ha="center", fontsize=11, fontweight="bold", color=C0)
+    ax.add_patch(FancyBboxPatch((lx, y), lw, bh, boxstyle="round,pad=0.02", fc="#f7fafc", ec=col, lw=2))
+    ax.add_patch(Rectangle((lx, y), 0.11, bh, fc=col, ec="none"))
+    ax.text(lx + 0.16, y + 0.38, title, fontsize=9.5, fontweight="bold", va="center", color=C0)
+    ax.text(lx + 0.16, y + 0.17, sub, fontsize=8, va="center", color=C_GRAY)
+    cx = lx + lw + 0.18
+    cy = y + bh / 2
+    ax.annotate("", xy=(3.72, cy), xytext=(lx + lw, cy),
+                arrowprops=dict(arrowstyle="-|>", color=C_GRAY, lw=1.0))
+  # 右侧竖条：调度核心
+  ox, ow = 3.82, 0.95
+  ax.add_patch(FancyBboxPatch((ox, 0.38), ow, 3.05, boxstyle="round,pad=0.03", fc=C0, ec="white", lw=1.5))
+  _multiline(ax, ox + ow / 2, 1.9, ["Care", "Orchestrator"], fontsize=9, color="white", fontweight="bold")
+  ax.text(ox + ow / 2, 0.22, "模块调度", ha="center", fontsize=7.5, color=C4)
   return _save(fig, "architecture_layers.png")
 
 
@@ -231,7 +256,6 @@ def fig_state_machine() -> Path:
               arrowprops=dict(arrowstyle="->", color=C_ORANGE, lw=1))
   ax.annotate("确认跌倒", xy=(4.2, 2.55), xytext=(3.6, 3.2), fontsize=8, color=C_RED,
               arrowprops=dict(arrowstyle="->", color=C_RED, lw=1))
-  ax.text(2.5, 3.55, "Fig.2 CareOrchestrator 有限状态机", ha="center", fontsize=11, fontweight="bold", color=C0)
   ax.text(2.5, 0.45, "紧急态可打断对话与常规任务", ha="center", fontsize=9,
           bbox=dict(boxstyle="round", fc="#fff5f5", ec=C_RED, lw=0.8), color=C_RED)
   return _save(fig, "state_machine.png")
@@ -281,62 +305,62 @@ def fig_risk_fusion() -> Path:
 # ── 7. 跌倒：决策树（菱形判断） ───────────────────────────────
 def fig_fall_decision_tree() -> Path:
   fig = _fig()
-  ax = fig.add_axes([0, 0, 1, 1])
+  ax = fig.add_axes([0.08, 0.08, 0.84, 0.84])
   ax.set_xlim(0, 5)
-  ax.set_ylim(0, 3.9)
+  ax.set_ylim(0, 3.5)
   ax.axis("off")
+  cx = 2.5
 
-  def diamond(cx, cy, text):
-    d = 0.55
-    pts = [(cx, cy + d), (cx + d * 1.3, cy), (cx, cy - d), (cx - d * 1.3, cy)]
-    ax.add_patch(Polygon(pts, closed=True, fc="#ebf8ff", ec=C2, lw=1.5))
-    ax.text(cx, cy, text, ha="center", va="center", fontsize=8, color=C0)
+  def rect(cy, text, fc=C1):
+    ax.add_patch(FancyBboxPatch((cx - 0.85, cy - 0.2), 1.7, 0.4, boxstyle="round", fc=fc, ec="white"))
+    ax.text(cx, cy, text, ha="center", va="center", fontsize=9, color="white", fontweight="bold")
 
-  def rect(cx, cy, text, fc=C1):
-    ax.add_patch(FancyBboxPatch((cx - 0.75, cy - 0.22), 1.5, 0.44, boxstyle="round", fc=fc, ec="white"))
-    ax.text(cx, cy, text, ha="center", va="center", fontsize=8, color="white", fontweight="bold")
+  rect(3.15, "MediaPipe 骨架", C2)
+  _diamond(ax, cx, 2.45, [r"$R$ 宽高比", "异常?"])
+  _diamond(ax, cx, 1.45, [r"$v_y$ 快速", "下降?"])
+  rect(0.45, "触发 EMERGENCY", C_RED)
 
-  rect(2.5, 3.35, "MediaPipe 骨架", C2)
-  ax.annotate("", xy=(2.5, 2.95), xytext=(2.5, 3.12), arrowprops=dict(arrowstyle="-|>", color=C_GRAY))
-  diamond(2.5, 2.55, r"$R$ 宽高比\n异常?")
-  diamond(2.5, 1.55, r"$v_y$ 快速\n下降?")
-  rect(2.5, 0.55, "触发 EMERGENCY", C_RED)
-  ax.annotate("是", xy=(2.5, 0.85), xytext=(3.35, 1.55), fontsize=8, color=C_RED,
-              arrowprops=dict(arrowstyle="-|>", color=C_RED))
-  ax.annotate("", xy=(2.5, 2.15), xytext=(2.5, 2.35), arrowprops=dict(arrowstyle="-|>", color=C_GRAY))
-  ax.annotate("", xy=(2.5, 1.15), xytext=(2.5, 2.15), arrowprops=dict(arrowstyle="-|>", color=C_GRAY))
-  ax.text(3.2, 2.55, "否→正常", fontsize=7, color=C_GRAY)
-  ax.text(2.5, 3.62, "Fig.3 跌倒判定逻辑", ha="center", fontsize=11, fontweight="bold", color=C0)
+  for y1, y2 in [(3.15, 2.75), (2.45, 1.95), (1.45, 0.75)]:
+    ax.annotate("", xy=(cx, y2 + 0.22), xytext=(cx, y1 - 0.22),
+                arrowprops=dict(arrowstyle="-|>", color=C_GRAY, lw=1.2))
+  ax.annotate("是", xy=(cx, 0.68), xytext=(cx + 0.95, 1.45), fontsize=8, color=C_RED,
+              arrowprops=dict(arrowstyle="-|>", color=C_RED, lw=1))
+  ax.text(cx + 1.15, 2.45, "否 → 正常", fontsize=8, color=C_GRAY, va="center")
+  ax.text(cx + 1.15, 1.45, "否 → 正常", fontsize=8, color=C_GRAY, va="center")
   return _save(fig, "fall_decision_tree.png")
 
 
 # ── 8. 对话：UML 序列图 ─────────────────────────────────────────
 def fig_dialogue_sequence() -> Path:
   fig = _fig()
-  ax = fig.add_axes([0.06, 0.08, 0.9, 0.82])
+  ax = fig.add_axes([0.07, 0.12, 0.88, 0.78])
   ax.set_xlim(0, 5)
-  ax.set_ylim(0, 4)
+  ax.set_ylim(0, 3.4)
   ax.axis("off")
-  actors = ["老人", "情绪\n分析", "Dialogue\nManager", "输出"]
-  xs = [0.6, 1.7, 2.9, 4.1]
-  for x, name in zip(xs, actors):
-    ax.text(x, 3.75, name, ha="center", fontsize=9, fontweight="bold", color=C0)
-    ax.plot([x, x], [0.35, 3.5], ls="--", color=C_GRID, lw=1)
+  actor_labels = ["老人", ["情绪", "分析"], ["Dialogue", "Manager"], "输出"]
+  xs = [0.55, 1.65, 2.85, 4.05]
+  lane_top, lane_bot = 2.95, 0.55
+  for x, lab in zip(xs, actor_labels):
+    if isinstance(lab, str):
+      ax.text(x, 3.22, lab, ha="center", fontsize=9, fontweight="bold", color=C0)
+    else:
+      _multiline(ax, x, 3.18, lab, fontsize=8.5, fontweight="bold")
+    ax.plot([x, x], [lane_bot, lane_top], ls="--", color=C_GRID, lw=1, zorder=0)
   msgs = [
-    (0, 1, 3.2, "话语"),
-    (1, 2, 2.7, "情绪标签"),
-    (2, 3, 2.1, "安抚话术"),
-    (0, 2, 1.5, "（可选）LLM API"),
+    (0, 1, 2.65, "话语"),
+    (1, 2, 2.15, "情绪标签"),
+    (2, 3, 1.65, "安抚话术"),
+    (0, 2, 1.05, "可选 LLM"),
   ]
-  for i, (a, b, y, label) in enumerate(msgs):
+  for a, b, y, label in msgs:
     x1, x2 = xs[a], xs[b]
-    style = "-|>" if i < 3 else "-|>"
-    col = C2 if i < 3 else C_GRAY
-    ax.annotate("", xy=(x2 - 0.05, y), xytext=(x1 + 0.05, y), arrowprops=dict(arrowstyle=style, color=col, lw=1.3))
-    ax.text((x1 + x2) / 2, y + 0.08, label, ha="center", fontsize=8, color=col)
-  ax.text(2.5, 0.15, "默认 Mock，现场无需外网", ha="center", fontsize=8, color=C_GRAY,
-          bbox=dict(boxstyle="round", fc="#f7fafc", ec=C_GRID))
-  ax.text(2.5, 3.95, "Fig.4 对话模块时序", ha="center", fontsize=11, fontweight="bold", color=C0)
+    col = C2 if label != "可选 LLM" else C_GRAY
+    ax.annotate("", xy=(x2 - 0.04, y), xytext=(x1 + 0.04, y),
+                arrowprops=dict(arrowstyle="-|>", color=col, lw=1.2))
+    ax.text((x1 + x2) / 2, y + 0.12, label, ha="center", fontsize=8, color=col,
+            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.85))
+  ax.text(2.5, 0.28, "默认 Mock，现场无需外网", ha="center", fontsize=8, color=C_GRAY,
+          bbox=dict(boxstyle="round,pad=0.35", fc="#f7fafc", ec=C_GRID, lw=0.8))
   return _save(fig, "dialogue_sequence.png")
 
 
@@ -366,7 +390,6 @@ def fig_pipeline_swimlane() -> Path:
   ax.set_xlim(0, 5)
   ax.set_ylim(0, 3.5)
   ax.axis("off")
-  ax.set_title("Fig.5 单帧数据流（泳道）", fontsize=11, fontweight="bold", color=C0, loc="left", pad=4)
   return _save(fig, "pipeline_swimlane.png")
 
 
@@ -381,7 +404,7 @@ def fig_emergency_timing() -> Path:
   ax.set_yticks(range(4))
   ax.set_yticklabels(steps, fontweight="bold")
   ax.set_xlabel("相对时间 (s)", fontweight="bold")
-  ax.set_title("Fig.6 紧急响应时序", loc="left", fontsize=11, fontweight="bold", color=C0)
+  ax.set_title("紧急响应时序（示意）", loc="left", fontsize=10, fontweight="bold", color=C0)
   ax.grid(axis="x", ls=":", color=C_GRID)
   for spine in ("top", "right"):
     ax.spines[spine].set_visible(False)
@@ -410,13 +433,22 @@ def fig_eval_results() -> Path:
 
   ax_bar = fig.add_axes([0.46, 0.14, 0.50, 0.72])
   if details:
-    names = [d["name"].replace("_", "\n") for d in details]
+    short = {
+      "standing_normal": "站立",
+      "walking_normal": "行走",
+      "sit_down": "坐下",
+      "sudden_fall": "快跌",
+      "lying_still": "躺倒",
+      "bend_pickup": "弯腰",
+    }
+    names = [short.get(d["name"], d["name"][:8]) for d in details]
     scores = [d.get("max_score", 0) for d in details]
     colors = [C_RED if d.get("detected") else C2 for d in details]
     ypos = np.arange(len(names))
-    ax_bar.barh(ypos, scores, color=colors, height=0.65, edgecolor=C0, linewidth=0.4)
+    ax_bar.barh(ypos, scores, color=colors, height=0.62, edgecolor=C0, linewidth=0.4)
     ax_bar.set_yticks(ypos)
-    ax_bar.set_yticklabels(names, fontsize=7)
+    ax_bar.set_yticklabels(names, fontsize=8)
+    ax_bar.tick_params(axis="y", pad=4)
     ax_bar.set_xlabel(r"$\max S_{\mathrm{fall}}$")
     ax_bar.set_xlim(0, 1.0)
     ax_bar.axvline(0.5, color=C_ORANGE, ls="--", lw=1, label="阈值示意")

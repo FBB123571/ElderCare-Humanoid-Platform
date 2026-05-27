@@ -34,10 +34,10 @@ FIG_PAD_Y = 0.06
 FIG_LEFT = COL_R + FIG_PAD_X
 FIG_WIDTH = COL_R_W - 2 * FIG_PAD_X
 FIG_TOP = CONTENT_TOP + FIG_PAD_Y
-FIG_CAP_H = CAPTION_H
-# 图体 + 图注均在 CONTENT 内
+FIG_CAP_H = 0.24
+# 图体 + 图注均在 CONTENT 内（图注固定底部，不与图重叠）
 FIG_TOTAL_H = CONTENT_H - 2 * FIG_PAD_Y
-FIG_BODY_H = FIG_TOTAL_H - FIG_CAP_H - 0.04
+FIG_BODY_H = FIG_TOTAL_H - FIG_CAP_H - 0.06
 
 
 def body_height(*, with_ribbon: bool = False) -> float:

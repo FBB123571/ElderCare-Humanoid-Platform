@@ -326,11 +326,10 @@ def _place_figure(
 
 
 def _place_right_figure(slide, path: Path, *, caption: str = "") -> None:
-  """标准左文右图页的右栏配图。"""
+  """标准左文右图页的右栏配图（图体与图注分区）。"""
   panel_left = COL_R + 0.04
   panel_w = COL_R_W - 0.08
   _draw_figure_panel(slide, left=panel_left, top=FIG_TOP - 0.02, width=panel_w, height=FIG_TOTAL_H)
-  # 左栏与右栏分隔线
   sep = slide.shapes.add_shape(1, Inches(COL_L + COL_L_W + GUTTER * 0.45), Inches(CONTENT_TOP),
                                Inches(0.012), Inches(CONTENT_H))
   sep.fill.solid()
@@ -338,8 +337,8 @@ def _place_right_figure(slide, path: Path, *, caption: str = "") -> None:
   sep.line.fill.background()
   _place_figure(
     slide, path,
-    left=FIG_LEFT, top=FIG_TOP, max_w=FIG_WIDTH, max_h=FIG_TOTAL_H,
-    caption=caption, fill_ratio=0.94, framed=True,
+    left=FIG_LEFT, top=FIG_TOP, max_w=FIG_WIDTH, max_h=FIG_BODY_H + FIG_CAP_H,
+    caption=caption, fill_ratio=0.92, framed=True,
   )
 
 
@@ -719,19 +718,23 @@ def _slide_qr_dual(prs):
   ], size=13)
   _draw_figure_panel(slide, left=COL_R + 0.04, top=FIG_TOP - 0.02, width=COL_R_W - 0.08, height=FIG_TOTAL_H)
   qr = ASSETS / "ppt_demo_qr.png"
-  demo = ASSETS / "ppt_mediapipe_pose.png"
-  qr_w = 1.75
-  gap = 0.12
+  demo = ASSETS / "ppt_header_perception.png"
+  if not demo.exists():
+    demo = ASSETS / "ppt_full_dashboard.png"
+  qr_w = 1.72
+  gap = 0.14
+  img_top = FIG_TOP + 0.05
+  img_h = FIG_TOTAL_H - FIG_CAP_H - 0.08
   if qr.exists():
     _place_figure(
-      slide, qr, left=FIG_LEFT, top=FIG_TOP + 0.2,
-      max_w=qr_w, max_h=qr_w, caption="仓库二维码", fill_ratio=0.92, framed=False,
+      slide, qr, left=FIG_LEFT, top=img_top + 0.25,
+      max_w=qr_w, max_h=qr_w, caption="仓库二维码", fill_ratio=0.90, framed=False,
     )
   if demo.exists():
     _place_figure(
-      slide, demo, left=FIG_LEFT + qr_w + gap, top=FIG_TOP,
-      max_w=FIG_WIDTH - qr_w - gap, max_h=FIG_TOTAL_H,
-      caption="演示界面", fill_ratio=0.92, framed=False,
+      slide, demo, left=FIG_LEFT + qr_w + gap, top=img_top,
+      max_w=FIG_WIDTH - qr_w - gap, max_h=img_h,
+      caption="Web 感知界面", fill_ratio=0.90, framed=False,
     )
 
 
@@ -755,6 +758,14 @@ def main():
 
   _ensure_qr_code()
   sci.gen_all()
+  try:
+    from tools.clean_pose_asset import clean_pose_image, SRC as POSE_SRC, OUT as POSE_OUT
+
+    tmp_pose = POSE_SRC.with_suffix(".tmp.png")
+    if clean_pose_image(POSE_SRC, tmp_pose):
+      tmp_pose.replace(POSE_OUT)
+  except Exception:
+    pass
 
   prs = Presentation()
   prs.slide_width = Inches(SLIDE_W)
@@ -794,7 +805,7 @@ def main():
     "核心是 CareOrchestrator，负责模块调度",
     "跌倒要能检、要能触发紧急流程",
     "对话和机器人动作要能联动",
-  ], "architecture_layers.png", sci=True, caption="Fig.1 系统分层",
+  ], "architecture_layers.png", sci=True, caption="系统四层架构",
      takeaway="目标在系统里都能点到")
 
   _part_divider(prs, "第二部分", "模型 · 架构 · 算法",
@@ -805,14 +816,14 @@ def main():
     "中间做风险、对话和任务规划",
     "下面接跌倒、情绪、视觉等感知",
     "最底层通过适配器连仿真或 ROS2",
-  ], "architecture_layers.png", sci=True, caption="四层架构与调度核心")
+  ], "architecture_layers.png", sci=True, caption="分层与 CareOrchestrator")
 
   _slide_lr(prs, "状态机怎么切换", [
     "平时监测，对话时走倾诉流程",
     "风险升高先告警，确认跌倒进紧急",
     "紧急状态可以打断正在进行的对话",
     "每次循环都会记下分数、回复和动作",
-  ], "state_machine.png", sci=True, caption="Fig.2 有限状态机")
+  ], "state_machine.png", sci=True, caption="有限状态机")
 
   _slide_lr(prs, "风险分数怎么算", [
     "跌倒、情绪、健康三路各占一部分权重",
@@ -826,28 +837,28 @@ def main():
     "快速跌倒和慢速躺倒两套规则",
     "在 6 组合成场景上 F1 到 100%",
     "支持摄像头，也支持上传照片",
-  ], "fall_decision_tree.png", sci=True, caption="Fig.3 规则判定树")
+  ], "fall_decision_tree.png", sci=True, caption="规则判定树")
 
   _slide_lr(prs, "对话模块", [
     "先识别老人话里的情绪",
     "再由 DialogueManager 生成回复",
     "默认用 Mock，现场不依赖外网",
     "需要时可以换成 LLM 接口",
-  ], "dialogue_sequence.png", sci=True, caption="Fig.4 UML 时序图")
+  ], "dialogue_sequence.png", sci=True, caption="对话时序图")
 
   _slide_lr(prs, "数据怎么往下走", [
     "一帧感知数据进来先提特征",
     "融合后交给状态机判断阶段",
     "规划器决定机器人做什么动作",
     "Web 页面上能看到整条链路",
-  ], "pipeline_swimlane.png", sci=True, caption="Fig.5 泳道数据流")
+  ], "pipeline_swimlane.png", sci=True, caption="单帧泳道数据流")
 
   _slide_lr(prs, "确认跌倒之后怎么办", [
     "先播告警，再语音安抚",
     "然后通知家属，最后做举手等动作",
     "EmergencyNotifier 里留了记录",
     "脚本测过端到端触发率 100%",
-  ], "emergency_timing.png", sci=True, figure_kind="chart", caption="Fig.6 紧急响应时序",
+  ], "emergency_timing.png", sci=True, figure_kind="chart", caption="紧急响应时序",
      takeaway="紧急流程在演示里能完整走通")
 
   _part_divider(prs, "第三部分", "实现 · 测试 · 演示",
