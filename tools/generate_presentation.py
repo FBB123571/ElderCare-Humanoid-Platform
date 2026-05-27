@@ -395,6 +395,25 @@ def _slide_lr(
   return slide
 
 
+def _slide_draw(prs, title: str, bullets: list[str], draw_fn, *, takeaway: str = "", bullet_size: int = 12, footer_hint: str = ""):
+  slide = _content_slide(prs, title, footer_hint)
+  _bullets_panel(slide, bullets, takeaway=takeaway, size=bullet_size)
+  draw_fn(slide, COL_R + 0.05, CONTENT_TOP + 0.04, COL_R_W - 0.1, CONTENT_H - 0.08)
+  return slide
+
+
+def _screenshot_duo(prs, title: str, left_img: str, right_img: str, cap_l: str = "", cap_r: str = ""):
+  slide = _content_slide(prs, title, "系统实拍")
+  half = (SLIDE_W - 2 * MARGIN - 0.15) / 2
+  for i, (img, cap) in enumerate([(left_img, cap_l), (right_img, cap_r)]):
+    _place_figure(
+      slide, ASSETS / img,
+      left=MARGIN + i * (half + 0.15), top=CONTENT_TOP + 0.05,
+      max_w=half, max_h=CONTENT_H - 0.1, caption=cap, fill_ratio=1.0,
+    )
+  return slide
+
+
 def _slide_open_source(prs):
   """开源页：左信息卡片 + 右二维码与演示缩略图（避免 QR 过大）。"""
   slide = _content_slide(prs, "开源与可复现性")
@@ -504,7 +523,7 @@ def _hero_cover(prs):
   _set_para_font(tp, 9, color=RGBColor(148, 163, 184))
 
 
-def _part_divider(prs, part: str, subtitle: str, preview: list[str], thumb: str = "architecture.png"):
+def _part_divider(prs, part: str, subtitle: str, preview: list[str], draw_fn=None):
   slide = _slide(prs)
   _bg_white(slide)
   _header_bar(slide)
@@ -551,18 +570,13 @@ def _part_divider(prs, part: str, subtitle: str, preview: list[str], thumb: str 
     _set_para_font(cp, 11, color=RGBColor(226, 232, 240))
     chip_y += 0.48
 
-  pth = DIAG / thumb
   right_w = SLIDE_W - left_w
   right_bg = slide.shapes.add_shape(1, Inches(left_w), Inches(HEADER_H), Inches(right_w), Inches(block_h))
   right_bg.fill.solid()
   right_bg.fill.fore_color.rgb = LIGHT_BLUE
   right_bg.line.fill.background()
-  if pth.exists():
-    _place_figure(
-      slide, pth, left=left_w + IMG_PAD, top=CONTENT_TOP + IMG_PAD,
-      max_w=right_w - 2 * IMG_PAD, max_h=CONTENT_H - 2 * IMG_PAD,
-      caption="", edge_to_edge=True, fill_ratio=1.0,
-    )
+  if draw_fn:
+    draw_fn(slide, left_w + 0.08, CONTENT_TOP + 0.06, right_w - 0.16, CONTENT_H - 0.12)
 
 
 def _screenshot_slide(prs, title: str, image_file: str, caption: str = ""):
@@ -651,10 +665,9 @@ def _ensure_qr_code() -> None:
 def main():
   import sys
   sys.path.insert(0, str(ROOT))
-  from tools.ppt_diagrams import gen_all
+  from tools import ppt_draw as draw
 
   _ensure_qr_code()
-  gen_all()
 
   prs = Presentation()
   prs.slide_width = Inches(SLIDE_W)
@@ -662,153 +675,147 @@ def main():
 
   _hero_cover(prs)
 
-  _slide_lr(prs, "目录", [
-    "第一部分  项目背景与需求分析",
-    "第二部分  关键技术与理论模型",
-    "第三部分  系统实现与实验验证",
-    "第四部分  创新点与展望",
-    "附录  演示界面与开源仓库",
-  ], "pipeline.png", caption="全篇结构", key_takeaway="理论 + 工程 + 现场演示")
+  _slide_draw(prs, "答辩提纲", [
+    "一、为什么做：老龄化与跌倒风险",
+    "二、怎么做：模型、架构与算法",
+    "三、做出来什么：系统演示与测试",
+    "四、有什么特色：创新点与后续",
+  ], draw.draw_toc_timeline)
 
   _slide_team_info(prs)
 
-  _part_divider(prs, "第一部分", "项目背景 · 需求分析 · 方案定位",
-                ["老龄化与跌倒空窗", "方案对比", "项目目标"], "aging_chart.png")
+  _part_divider(prs, "第一部分", "背景 · 需求 · 定位",
+                ["老龄化", "方案对比", "项目目标"], draw.draw_aging_bars)
 
-  _slide_lr(prs, "社会背景：老龄化与跌倒风险", [
-    "独居老人增多，跌倒「发现空窗」是核心痛点",
-    "情感陪伴需求上升，监测难形成照护闭环",
-    "政策导向：智慧养老与居家安全并重",
-    "本项目：仿真验证 + 人形机器人接口",
-  ], "aging_chart.png", figure_kind="chart", caption="国家统计局趋势示意",
-    key_takeaway="痛点：发现慢 + 闭环弱", highlight_last=True, bullet_size=12)
+  _slide_draw(prs, "社会背景：老龄化与跌倒风险", [
+    "独居老人变多，跌倒了没人及时发现很常见",
+    "监测设备多，但很少把告警和机器人动作连起来",
+    "政策在推智慧养老，我们按居家场景做验证",
+    "用仿真平台先把流程跑通，再对接人形机",
+  ], draw.draw_aging_bars, takeaway="难点：发现慢，闭环弱")
 
-  _slide_lr(prs, "现有方案对比", [
-    "传统音箱/摄像头/手环：功能割裂",
-    "本作品：感知—决策—执行统一编排",
-    "强调可解释风险与紧急硬优先级",
-    "配套 Web 演示与量化评测脚本",
-  ], "compare.png", key_takeaway="从堆叠到一体化闭环")
+  _slide_draw(prs, "和常见方案比一比", [
+    "我们不是把音箱、摄像头、手环简单拼在一起",
+    "用统一调度把感知、决策、执行串成一条链",
+    "风险结果能解释，方便答辩和后期调参",
+    "仓库里带 Web 和脚本，老师可以现场点着看",
+  ], draw.draw_compare)
 
-  _slide_lr(prs, "项目概述与目标", [
-    "CareCompanion：养老人形陪伴软件平台",
-    "CareOrchestrator 统一调度各模块",
-    "目标1：跌倒检测与紧急呼叫自动化",
-    "目标2：情感对话与机器人动作联动",
-    "目标3：ROS2 部署接口 + 开源可复现",
-  ], "architecture.png", key_takeaway="三大目标均可现场验证")
+  _slide_draw(prs, "项目要做什么", [
+    "CareCompanion：养老场景的人形陪伴软件",
+    "核心是 CareOrchestrator，负责模块调度",
+    "跌倒要能检、要能触发紧急流程",
+    "对话和机器人动作要能联动",
+  ], draw.draw_architecture, takeaway="目标在系统里都能点到")
 
-  _part_divider(prs, "第二部分", "理论模型 · 算法设计 · 系统架构",
-                ["四层架构", "风险融合", "应急链路"], "state_machine.png")
+  _part_divider(prs, "第二部分", "模型 · 架构 · 算法",
+                ["四层架构", "状态机", "融合与检测"], draw.draw_state_machine)
 
-  _slide_lr(prs, "系统总体架构", [
-    "四层架构：感知 / 认知 / 执行 / 交互",
-    "核心：CareOrchestrator + 状态机",
-    "模块可替换：仿真、Web、ROS2 共用一套逻辑",
-    "配置集中于 config/default.yaml",
-  ], "architecture.png", caption="四层架构", key_takeaway="理论清晰、可替换")
+  _slide_draw(prs, "系统怎么分层", [
+    "最上面是 Web/GUI，老师和评委直接看",
+    "中间做风险、对话和任务规划",
+    "下面接跌倒、情绪、视觉等感知",
+    "最底层通过适配器连仿真或 ROS2",
+  ], draw.draw_architecture)
 
-  _slide_lr(prs, "状态机与调度策略", [
-    "MONITOR → CONVERSE → ALERT → EMERGENCY",
-    "紧急态可打断对话与常规任务",
-    "每个 tick 输出风险、回复、动作序列",
-    "便于日志审计与答辩讲解",
-  ], "state_machine.png", caption="状态转移")
+  _slide_draw(prs, "状态机怎么切换", [
+    "平时监测，对话时走倾诉流程",
+    "风险升高先告警，确认跌倒进紧急",
+    "紧急状态可以打断正在进行的对话",
+    "每次循环都会记下分数、回复和动作",
+  ], draw.draw_state_machine)
 
-  _slide_lr(prs, "多模态风险融合（理论）", [
-    "加权融合跌倒、情绪、健康三路分数",
-    "输出等级与原因列表，非黑盒端到端",
-    "阈值可配置，支持场景调参",
-    "契合医疗与养老合规沟通需求",
-  ], "risk_formula.png", caption="融合公式")
+  _slide_draw(prs, "风险分数怎么算", [
+    "跌倒、情绪、健康三路各占一部分权重",
+    "不是端到端黑盒，会给出原因列表",
+    "阈值写在配置里，不同场景能改",
+    "方便和医生、护理人员沟通",
+  ], draw.draw_risk_formula)
 
-  _slide_lr(prs, "跌倒检测算法设计", [
-    "输入：MediaPipe 骨架几何特征",
-    "快速跌倒 + 慢速躺倒双规则",
-    "合成 6 场景评测 F1=100%",
-    "可接摄像头或上传照片分析",
-  ], "fall_flow.png", caption="检测流程")
+  _slide_draw(prs, "跌倒怎么判断", [
+    "用 MediaPipe 提骨架，算宽高比和速度",
+    "快速跌倒和慢速躺倒两套规则",
+    "在 6 组合成场景上 F1 到 100%",
+    "支持摄像头，也支持上传照片",
+  ], draw.draw_fall_flow)
 
-  _slide_lr(prs, "对话与情感模块", [
-    "文本情感词典 + 情绪标签融合",
-    "DialogueManager 生成安抚话术",
-    "默认 Mock，可切换 LLM API",
-    "与 RiskEngine、CarePlanner 协同",
-  ], "llm_module.png", caption="对话模块")
+  _slide_draw(prs, "对话模块", [
+    "先识别老人话里的情绪",
+    "再由 DialogueManager 生成回复",
+    "默认用 Mock，现场不依赖外网",
+    "需要时可以换成 LLM 接口",
+  ], draw.draw_llm_flow)
 
-  _slide_lr(prs, "数据处理与决策流水线", [
-    "感知帧 → 特征 → 融合 → 状态机",
-    "CarePlanner 生成 RobotAction",
-    "RobotAdapter 下发仿真或 ROS2",
-    "全链路可在 Web 界面观察",
-  ], "pipeline.png", caption="数据流水线")
+  _slide_draw(prs, "数据怎么往下走", [
+    "一帧感知数据进来先提特征",
+    "融合后交给状态机判断阶段",
+    "规划器决定机器人做什么动作",
+    "Web 页面上能看到整条链路",
+  ], draw.draw_pipeline)
 
-  _slide_lr(prs, "紧急响应链路（理论）", [
-    "确认跌倒后按序触发四类动作",
-    "告警音 → 语音 → 家属通知 → 手势",
-    "EmergencyNotifier 记录推送渠道",
-    "端到端触发率评测 100%",
-  ], "emergency_flow.png", key_takeaway="紧急链路可端到端验证")
+  _slide_draw(prs, "确认跌倒之后怎么办", [
+    "先播告警，再语音安抚",
+    "然后通知家属，最后做举手等动作",
+    "EmergencyNotifier 里留了记录",
+    "脚本测过端到端触发率 100%",
+  ], draw.draw_emergency_chain, takeaway="紧急流程在演示里能完整走通")
 
-  _part_divider(prs, "第三部分", "系统实现 · 实验验证 · 现场演示",
-                ["Web 控制台", "视觉分析", "量化评测"], "metrics_chart.png")
+  _part_divider(prs, "第三部分", "实现 · 测试 · 演示",
+                ["Web", "视觉", "指标"], draw.draw_metrics)
 
-  _slide_lr(prs, "Web 控制台实现", [
-    "FastAPI 后端 + 浏览器前端",
-    "实时风险仪表盘、对话与指令流",
-    "支持上传照片 / 摄像头骨架分析",
-    "一键演示剧本：日常→倾诉→跌倒",
-  ], "ppt_full_dashboard.png", diagram=False, caption="仪表盘实拍")
+  _slide_lr(prs, "Web 端长什么样", [
+    "后端 FastAPI，前端浏览器打开即可",
+    "一页里能看到风险、对话和指令",
+    "可以上传照片做骨架分析",
+    "内置剧本：日常—倾诉—跌倒",
+  ], "ppt_full_dashboard.png", diagram=False, caption="主界面")
 
-  _screenshot_slide(prs, "系统界面：MediaPipe 骨架分析", "ppt_mediapipe_pose.png",
-                    "上传全身照导出骨架图 · 支持现场演示")
-  _screenshot_slide(prs, "系统界面：老人倾诉场景", "ppt_full_dashboard.png",
-                    "演示「老人倾诉」· 风险 0.23 · 主动安抚")
-  _screenshot_slide(prs, "系统界面：风险决策仪表盘", "ppt_risk_panel.png",
-                    "多模态融合：分数、因素、回应与监测指标")
-  _screenshot_slide(prs, "系统界面：紧急状态监测", "ppt_header_perception.png",
-                    "状态机进入紧急 · MediaPipe 视觉模块")
-  _screenshot_slide(prs, "系统界面：跌倒紧急对话日志", "ppt_chat_emergency.png",
-                    "紧急流程触发 · 多次安抚语音")
-  _screenshot_slide(prs, "系统界面：机器人指令流", "ppt_robot_commands.png",
-                    "告警音→语音→呼叫→手势，全链路可追溯")
+  _screenshot_slide(prs, "骨架分析（上传照片）", "ppt_mediapipe_pose.png", "全身照 → 骨架叠加")
+  _screenshot_duo(prs, "风险与情绪输入", "ppt_risk_panel.png", "ppt_emotion_input.png", "风险面板", "情绪输入")
+  _screenshot_duo(prs, "紧急过程记录", "ppt_chat_emergency.png", "ppt_robot_commands.png", "对话日志", "机器人指令")
+  _screenshot_slide(prs, "紧急时感知页", "ppt_header_perception.png", "状态切到紧急后的感知区")
 
-  _slide_lr(prs, "实验评测结果", [
-    "跌倒检测 P/R/F1：100%（6类合成场景）",
-    "紧急呼叫端到端触发率：100%",
-    "单帧决策延迟 < 50ms（CPU）",
-    "pytest + 无头压测全部通过",
-    "报告：fall_eval_report.json",
-  ], "metrics_chart.png", key_takeaway="指标可复现、脚本一键运行")
+  _slide_draw(prs, "测试结果", [
+    "跌倒检测 P/R/F1：合成 6 场景均为 100%",
+    "紧急链路脚本跑通率 100%",
+    "单帧决策在 CPU 上 < 50ms",
+    "单元测试和无头演示都过了",
+  ], draw.draw_metrics, takeaway="数据写在 fall_eval_report.json")
 
   _slide_open_source(prs)
 
-  _part_divider(prs, "第四部分", "创新点 · 应用价值 · 后续计划",
-                ["创新维度", "真机路线", "软著专利"], "innovation_radar.png")
+  _part_divider(prs, "第四部分", "创新 · 计划", ["五个方向", "真机", "软著"], draw.draw_roadmap)
 
-  _slide_lr(prs, "创新维度总结", [
-    "多模态可解释融合，优于模块堆叠",
-    "紧急硬优先级状态机 + 动作闭环",
-    "MediaPipe 视觉接入，非纯滑块",
-    "工程化：评测脚本 + 开源仓库",
-    "面向居家养老的应用场景明确",
-  ], "innovation_radar.png", caption="创新雷达")
+  _slide_draw(prs, "创新点", [
+    "多路信号融合，结果能解释",
+    "紧急态在状态机里优先级最高",
+    "视觉用 MediaPipe，不是纯参数滑块",
+    "代码和评测脚本都开源",
+    "场景对准居家养老",
+  ], draw.draw_innovation_grid)
 
-  _slide_lr(prs, "后续工作计划", [
+  _slide_draw(prs, "后面打算做什么", [
     "对接 Unitree 等人形真机",
-    "引入 UR Fall 等公开数据集",
-    "多房间遮挡与光照优化",
-    "养老院调研与产品化评估",
-    "软著与专利布局",
-  ], "roadmap.png", caption="路线图")
+    "补充公开跌倒数据集",
+    "做多房间、弱光等复杂场景",
+    "去养老院做访谈和试用",
+    "软著和专利在准备",
+  ], draw.draw_roadmap)
 
-  _slide_lr(prs, "参考文献与资料", [
-    "[1] Google MediaPipe Pose",
-    "[2] Unitree / ROS2 文档",
-    "[3] 「十四五」养老服务规划",
-    "[4] docs/TECHNICAL_REPORT.md",
-    "[5] GitHub 开源仓库",
-  ], "pipeline.png")
+  slide = _content_slide(prs, "参考资料")
+  box = slide.shapes.add_textbox(Inches(0.55), Inches(1.35), Inches(8.9), Inches(3.5))
+  tf = box.text_frame
+  for i, line in enumerate([
+    "[1] Google MediaPipe Pose 技术文档",
+    "[2] Unitree / ROS2 开发文档",
+    "[3] 「十四五」国家老龄事业发展规划",
+    "[4] 项目技术报告 docs/TECHNICAL_REPORT.md",
+    f"[5] 源码 {GITHUB_URL}",
+  ]):
+    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+    p.text = line
+    _set_para_font(p, 13)
+    p.space_after = Pt(10)
 
   _slide_qr_dual(prs)
   _thanks_slide(prs)
