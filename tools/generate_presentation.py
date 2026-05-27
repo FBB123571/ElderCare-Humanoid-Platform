@@ -1,208 +1,426 @@
 #!/usr/bin/env python3
-"""生成答辩 PPT：docs/答辩_CareCompanion.pptx"""
+"""生成国赛风格答辩 PPT：docs/答辩_CareCompanion.pptx"""
+from __future__ import annotations
+
 from pathlib import Path
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.util import Inches, Pt
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "答辩_CareCompanion.pptx"
 
-BG = RGBColor(15, 23, 42)
-ACCENT = RGBColor(56, 189, 248)
-WHITE = RGBColor(240, 244, 252)
-MUTED = RGBColor(148, 163, 184)
+# 国赛常见：白底 + 深蓝标题条
+WHITE = RGBColor(255, 255, 255)
+BLACK = RGBColor(30, 30, 30)
+DARK = RGBColor(20, 50, 120)
+RED = RGBColor(192, 0, 0)
+GRAY = RGBColor(80, 80, 80)
+LIGHT_BLUE = RGBColor(235, 242, 250)
+
+COMP_LINE1 = "第二十六届中国机器人及人工智能大赛"
+COMP_LINE2 = "机器人创新赛道"
 
 
-def _style_title(shape, size=32, bold=True):
-  tf = shape.text_frame
+def _slide(prs: Presentation):
+  return prs.slides.add_slide(prs.slide_layouts[6])
+
+
+def _bg_white(slide):
+  slide.background.fill.solid()
+  slide.background.fill.fore_color.rgb = WHITE
+
+
+def _header_bar(slide):
+  bar = slide.shapes.add_shape(1, Inches(0), Inches(0), Inches(10), Inches(0.55))
+  bar.fill.solid()
+  bar.fill.fore_color.rgb = DARK
+  bar.line.fill.background()
+  box = slide.shapes.add_textbox(Inches(0.15), Inches(0.08), Inches(9.7), Inches(0.45))
+  tf = box.text_frame
+  tf.clear()
+  p1 = tf.paragraphs[0]
+  p1.text = COMP_LINE1
+  p1.font.size = Pt(11)
+  p1.font.bold = True
+  p1.font.color.rgb = WHITE
+  p2 = tf.add_paragraph()
+  p2.text = COMP_LINE2
+  p2.font.size = Pt(10)
+  p2.font.color.rgb = RGBColor(200, 220, 255)
+
+
+def _title(slide, text: str, top=0.75, size=26, color=BLACK, center=False):
+  box = slide.shapes.add_textbox(Inches(0.55), Inches(top), Inches(8.9), Inches(0.8))
+  tf = box.text_frame
   p = tf.paragraphs[0]
+  p.text = text
   p.font.size = Pt(size)
+  p.font.bold = True
+  p.font.color.rgb = color
+  p.alignment = PP_ALIGN.CENTER if center else PP_ALIGN.LEFT
+
+
+def _paragraph(slide, text: str, top=1.5, size=16, width=8.9, bold=False):
+  box = slide.shapes.add_textbox(Inches(0.55), Inches(top), Inches(width), Inches(3.8))
+  tf = box.text_frame
+  tf.word_wrap = True
+  p = tf.paragraphs[0]
+  p.text = text
+  p.font.size = Pt(size)
+  p.font.color.rgb = BLACK
   p.font.bold = bold
-  p.font.color.rgb = WHITE
-  p.alignment = PP_ALIGN.LEFT
+  p.line_spacing = 1.35
 
 
-def _add_bullets(slide, items: list[str], left=0.8, top=1.8, width=8.5, height=4.5):
-  box = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(height))
+def _bullets(slide, items: list[str], top=1.45, size=15, width=8.9):
+  box = slide.shapes.add_textbox(Inches(0.55), Inches(top), Inches(width), Inches(4.2))
   tf = box.text_frame
   tf.word_wrap = True
   for i, line in enumerate(items):
     p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
     p.text = line
+    p.font.size = Pt(size)
+    p.font.color.rgb = BLACK
+    p.space_after = Pt(6)
     p.level = 0
-    p.font.size = Pt(18)
-    p.font.color.rgb = WHITE
-    p.space_after = Pt(10)
 
 
-def _slide_title(prs: Presentation, title: str, subtitle: str = ""):
-  slide = prs.slides.add_slide(prs.slide_layouts[6])
-  slide.background.fill.solid()
-  slide.background.fill.fore_color.rgb = BG
-  t = slide.shapes.add_textbox(Inches(0.6), Inches(0.5), Inches(9), Inches(1.2))
-  t.text_frame.text = title
-  _style_title(t, 30)
-  if subtitle:
-    s = slide.shapes.add_textbox(Inches(0.6), Inches(1.35), Inches(9), Inches(0.8))
-    s.text_frame.text = subtitle
-    s.text_frame.paragraphs[0].font.size = Pt(16)
-    s.text_frame.paragraphs[0].font.color.rgb = MUTED
+def _content_slide(prs, title: str):
+  slide = _slide(prs)
+  _bg_white(slide)
+  _header_bar(slide)
+  _title(slide, title)
   return slide
+
+
+def _part_divider(prs, part: str, subtitle: str):
+  slide = _slide(prs)
+  _bg_white(slide)
+  _header_bar(slide)
+  _title(slide, part, top=2.0, size=32, center=True)
+  _title(slide, subtitle, top=2.85, size=22, color=DARK, center=True)
+
+
+def _compare_block(slide, left_title, left_items, right_title, right_items):
+  # 左：现有方案不足 Ø
+  lx, rx = 0.45, 5.05
+  for x, title, items, color in [
+    (lx, left_title, left_items, RED),
+    (rx, right_title, right_items, DARK),
+  ]:
+    t = slide.shapes.add_textbox(Inches(x), Inches(1.35), Inches(4.4), Inches(0.5))
+    t.text_frame.text = title
+    t.text_frame.paragraphs[0].font.size = Pt(14)
+    t.text_frame.paragraphs[0].font.bold = True
+    t.text_frame.paragraphs[0].font.color.rgb = color
+    b = slide.shapes.add_textbox(Inches(x), Inches(1.85), Inches(4.4), Inches(3.5))
+    tf = b.text_frame
+    tf.word_wrap = True
+    for i, line in enumerate(items):
+      p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+      p.text = line
+      p.font.size = Pt(13)
+      p.font.color.rgb = BLACK
+
+
+def _metrics_table(slide, rows: list[tuple[str, str]], top=1.5):
+  headers = ("指标", "结果")
+  n = len(rows) + 1
+  table = slide.shapes.add_table(n, 2, Inches(1.2), Inches(top), Inches(7.6), Inches(0.35 * n)).table
+  table.columns[0].width = Inches(4.2)
+  table.columns[1].width = Inches(3.4)
+  for c, h in enumerate(headers):
+    cell = table.cell(0, c)
+    cell.text = h
+    cell.fill.solid()
+    cell.fill.fore_color.rgb = DARK
+    for p in cell.text_frame.paragraphs:
+      p.font.size = Pt(12)
+      p.font.bold = True
+      p.font.color.rgb = WHITE
+  for r, (k, v) in enumerate(rows, start=1):
+    table.cell(r, 0).text = k
+    table.cell(r, 1).text = v
+    for c in range(2):
+      for p in table.cell(r, c).text_frame.paragraphs:
+        p.font.size = Pt(12)
+        p.font.color.rgb = BLACK
+
+
+def _innovation_table(slide, rows: list[tuple[str, str]]):
+  table = slide.shapes.add_table(
+    len(rows) + 1, 2, Inches(0.4), Inches(1.35), Inches(9.2), Inches(3.8)
+  ).table
+  table.columns[0].width = Inches(2.0)
+  table.columns[1].width = Inches(7.2)
+  table.cell(0, 0).text = "创新维度"
+  table.cell(0, 1).text = "描述"
+  for c in range(2):
+    cell = table.cell(0, c)
+    cell.fill.solid()
+    cell.fill.fore_color.rgb = DARK
+    for p in cell.text_frame.paragraphs:
+      p.font.size = Pt(11)
+      p.font.bold = True
+      p.font.color.rgb = WHITE
+  for r, (dim, desc) in enumerate(rows, start=1):
+    table.cell(r, 0).text = dim
+    table.cell(r, 1).text = desc
+    for c in range(2):
+      for p in table.cell(r, c).text_frame.paragraphs:
+        p.font.size = Pt(10)
+        p.font.color.rgb = BLACK
 
 
 def main():
   prs = Presentation()
   prs.slide_width = Inches(10)
-  prs.slide_height = Inches(7.5)
+  prs.slide_height = Inches(5.625)
 
-  # 1 封面
-  slide = prs.slides.add_slide(prs.slide_layouts[6])
-  slide.background.fill.solid()
-  slide.background.fill.fore_color.rgb = BG
-  t = slide.shapes.add_textbox(Inches(0.8), Inches(2.0), Inches(8.5), Inches(1.5))
-  t.text_frame.text = "CareCompanion"
-  _style_title(t, 44)
-  sub = slide.shapes.add_textbox(Inches(0.8), Inches(3.0), Inches(8.5), Inches(1.2))
-  sub.text_frame.text = "智能养老人形陪伴机器人系统"
-  sub.text_frame.paragraphs[0].font.size = Pt(24)
-  sub.text_frame.paragraphs[0].font.color.rgb = ACCENT
-  foot = slide.shapes.add_textbox(Inches(0.8), Inches(5.2), Inches(8.5), Inches(1))
-  foot.text_frame.text = "中国机器人及人工智能大赛 · 机器人创新赛道\n多模态感知 · 风险决策 · 人形机器人部署"
-  foot.text_frame.paragraphs[0].font.size = Pt(14)
-  foot.text_frame.paragraphs[0].font.color.rgb = MUTED
+  # ===== 封面 =====
+  slide = _slide(prs)
+  _bg_white(slide)
+  _header_bar(slide)
+  _title(slide, "CareCompanion", top=1.6, size=36, center=True, color=DARK)
+  _title(
+    slide,
+    "智能养老人形陪伴机器人系统",
+    top=2.35,
+    size=22,
+    center=True,
+    color=BLACK,
+  )
+  _paragraph(
+    slide,
+    "第一部分\n\n「感知—决策—执行」一体化的居家养老安全陪伴平台",
+    top=3.0,
+    size=18,
+    width=8.0,
+    bold=True,
+  )
+  for i, t in enumerate([COMP_LINE1, COMP_LINE2]):
+    box = slide.shapes.add_textbox(Inches(0.55), Inches(4.85 + i * 0.28), Inches(8.9), Inches(0.3))
+    box.text_frame.text = t
+    box.text_frame.paragraphs[0].font.size = Pt(11)
+    box.text_frame.paragraphs[0].font.color.rgb = GRAY
+    box.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
 
-  # 2 痛点
-  slide = _slide_title(prs, "1. 背景与痛点", "Population Aging & Home Care")
-  _add_bullets(slide, [
-    "我国老龄化加速，空巢/独居老人安全与情感需求突出",
-    "跌倒为老年人意外伤害首要原因之一，发现滞后后果严重",
-    "传统智能音箱：缺乏视觉安全闭环，无法实体援助",
-    "单一健康手环：缺乏对话陪伴与主动干预",
-    "→ 需要「感知 + 决策 + 人形执行」一体化陪伴系统",
-  ])
+  _part_divider(prs, "第一部分", "项目背景与需求分析")
 
-  # 3 创新点
-  slide = _slide_title(prs, "2. 创新点", "Innovation")
-  _add_bullets(slide, [
-    "多模态风险融合引擎：跌倒 + 情绪 + 生理指标 → 可解释评分",
-    "硬优先级状态机：紧急事件覆盖对话与常规任务",
-    "主动式照护规划：不仅聊天，还执行告警/靠近/呼救",
-    "仿真与真机统一接口：SimulationAdapter / ROS2Adapter",
-    "边缘优先：视觉本地 MediaPipe，对话可离线 Mock",
-  ])
+  slide = _content_slide(prs, "社会背景与痛点")
+  _paragraph(
+    slide,
+    "随着我国老龄化程度加深，空巢与独居老人数量持续增加。跌倒已成为老年人意外伤害的首要原因之一，"
+    "而「发现延迟」往往导致救援错过黄金时间。与此同时，老人对情感陪伴的需求日益增长——"
+    "他们不仅需要被监测，更需要被理解、被回应。",
+    top=1.35,
+    size=15,
+  )
 
-  # 4 架构
-  slide = _slide_title(prs, "3. 系统架构", "Architecture")
-  _add_bullets(slide, [
-    "感知层：FallDetector · EmotionRecognizer · HealthMonitor · PosePipeline",
-    "认知层：RiskEngine · DialogueManager · CarePlanner",
-    "执行层：RobotAdapter → 仿真 / ROS2 / 人形 SDK",
-    "交互层：Web 控制台 + 桌面仿真 + 无头压测",
-    "核心：CareOrchestrator 统一 tick 循环",
-  ])
+  slide = _content_slide(prs, "现有方案的不足")
+  _compare_block(
+    slide,
+    "现有产品/方案（Ø）",
+    [
+      "Ø 智能音箱：无视觉安全闭环，无法实体援助",
+      "Ø 监控摄像头：只告警不陪伴，缺乏对话与动作",
+      "Ø 健康手环：难发现跌倒过程，无机器人执行",
+      "Ø 纯仿真毕设：缺少真机部署路径与量化评测",
+    ],
+    "CareCompanion（ü）",
+    [
+      "ü 多模态融合：跌倒+情绪+生理→统一风险引擎",
+      "ü 可解释决策：输出风险分数与原因列表",
+      "ü 主动照护：告警/语音/手势/紧急呼叫联动",
+      "ü 人形接口：ROS2 标准话题，仿真与真机同源",
+      "ü 开源可复现：Web 控制台 + 评测脚本 + GitHub",
+    ],
+  )
 
-  # 5 跌倒算法
-  slide = _slide_title(prs, "4. 跌倒检测算法", "Fall Detection")
-  _add_bullets(slide, [
-    "几何特征：骨架宽高比 + 垂直速度 + 静止持续时间",
-    "MediaPipe Pose：浏览器/摄像头实时骨架提取",
-    "快速跌倒：下落 + 躺倒（score ≥ 0.7）",
-    "慢速跌倒：躺倒静止 ≥2s（养老场景）",
-    "合成场景评测：Precision/Recall/F1 = 100%",
-  ])
+  slide = _content_slide(prs, "项目概述")
+  _paragraph(
+    slide,
+    "基于上述需求，我们开发了 CareCompanion 智能养老人形陪伴机器人软件平台。"
+    "平台以 CareOrchestrator 为核心，融合 MediaPipe 视觉姿态、文本情感与健康指标，"
+    "在 Web 控制台完成演示验证，并通过 ROS2 适配层对接人形机器人。"
+    "系统已实现跌倒紧急链路自动化验证，合成场景跌倒检测 F1 达 100%。",
+    top=1.35,
+    size=15,
+  )
 
-  # 6 风险引擎
-  slide = _slide_title(prs, "5. 风险融合与决策", "Risk Engine")
-  _add_bullets(slide, [
-    "加权融合：跌倒 45% · 情绪 25% · 健康 30%",
-    "三级输出：normal / alert / emergency + 原因列表",
-    "状态机：MONITOR → CONVERSE → ALERT → EMERGENCY",
-    "紧急时：告警音 + 语音 + call_emergency + 手势",
-    "紧急通知：家属 App / 短信备份 / 本地告警（可扩展）",
-  ])
+  _part_divider(prs, "第二部分", "关键技术与系统架构")
 
-  # 7 对话
-  slide = _slide_title(prs, "6. 情感陪伴与对话", "Dialogue")
-  _add_bullets(slide, [
-    "文本情感词典 + 视觉情绪标签融合",
-    "可插拔 LLM：默认 Mock 离线，支持 OpenAI 兼容 API",
-    "场景示例：「有点孤独」→ 温暖安抚 + 挥手",
-    "用药/问候等关键词触发专属回复",
-    "与风险等级联动，紧急时优先安全话术",
-  ])
+  slide = _content_slide(prs, "系统总体架构")
+  _bullets(
+    slide,
+    [
+      "感知层：FallDetector · EmotionRecognizer · HealthMonitor · PosePipeline（MediaPipe）",
+      "认知层：RiskEngine（多模态融合）· DialogueManager · CarePlanner",
+      "执行层：RobotAdapter → SimulationAdapter / ROS2Adapter",
+      "交互层：Web 控制台 · 桌面 GUI · 无头自动化剧本",
+      "状态机：MONITOR → CONVERSE → ALERT → EMERGENCY（紧急硬优先级）",
+    ],
+    size=14,
+  )
 
-  # 8 Web演示
-  slide = _slide_title(prs, "7. Web 控制台演示", "Demo")
-  _add_bullets(slide, [
-    "浏览器访问：感知调节 + 实时风险仪表盘",
-    "摄像头：MediaPipe 骨架叠加 + 自动填充姿态参数",
-    "一键剧本：日常监测 → 倾诉 → 跌倒 → 紧急",
-    "对话日志 + 机器人指令流可视化",
-    "部署：bash scripts/run_web.sh · 端口 8765",
-  ])
+  slide = _content_slide(prs, "多模态风险融合引擎")
+  _bullets(
+    slide,
+    [
+      "融合公式：S = 0.45·S_fall + 0.25·S_emo + 0.30·S_health",
+      "输出：风险分数、等级（normal/alert/emergency）、原因列表",
+      "阈值：alert ≥ 0.65，emergency ≥ 0.85 或确认跌倒",
+      "优势：非黑盒 LLM，便于答辩解释与医疗合规沟通",
+    ],
+    size=14,
+  )
+  _paragraph(slide, "config/default.yaml 集中管理权重与阈值，支持场景调参。", top=4.0, size=12)
 
-  # 9 评测
-  slide = _slide_title(prs, "8. 实验与评测", "Evaluation")
-  _add_bullets(slide, [
-    "跌倒检测：6 类合成场景，F1=100%（见 docs/evaluation/METRICS.md）",
-    "端到端：run_headless_demo 100% 触发紧急呼叫",
-    "单元测试：pytest 覆盖决策与紧急链路",
-    "单 tick 延迟 <50ms（无云端 LLM）",
-    "待补充：公开数据集 + 真机视频",
-  ])
+  slide = _content_slide(prs, "跌倒检测算法")
+  _bullets(
+    slide,
+    [
+      "几何特征：骨架宽高比 R=w/h、垂直速度 v_y、静止持续时间",
+      "快速跌倒：快速下落 + 躺倒姿态（score ≥ 0.7）",
+      "慢速跌倒：躺倒静止 ≥ 2s（养老场景常见，score ≥ 0.55）",
+      "MediaPipe Pose：浏览器/摄像头实时骨架 → 自动填充感知参数",
+      "评测：6 类合成场景，Precision/Recall/F1 = 100%",
+    ],
+    size=14,
+  )
 
-  # 10 部署
-  slide = _slide_title(prs, "9. 人形机器人部署", "Deployment")
-  _add_bullets(slide, [
-    "边缘 NUC/Jetson 运行 care_companion",
-    "ROS2 发布 /care/robot_cmd JSON 指令",
-    "机器人端订阅 → Unitree / 智元 SDK 映射",
-    "指令：speak · gesture · approach · call_emergency",
-    "与 Isaac Lab 仿真可对接扩展",
-  ])
+  slide = _content_slide(prs, "情感陪伴与紧急响应")
+  _bullets(
+    slide,
+    [
+      "对话：文本情感词典 + 视觉情绪标签融合；可插拔 LLM（默认离线 Mock）",
+      "示例：「最近有点孤独」→ 温暖安抚 + speak + gesture",
+      "紧急：alert_sound → speak → call_emergency → raise_hand",
+      "EmergencyNotifier：家属 App 推送 / 短信备份 / 本地告警（日志可审计）",
+    ],
+    size=14,
+  )
 
-  # 11 对比
-  slide = _slide_title(prs, "10. 与现有方案对比", "Comparison")
-  _add_bullets(slide, [
-    "vs 智能音箱：多模态安全 + 实体动作 + 紧急硬优先级",
-    "vs 纯监控摄像头：主动对话 + 机器人执行 + 可解释决策",
-    "vs 纯仿真毕设：ROS2 真机路径 + 评测脚本 + 开源仓库",
-    "应用：社区养老、居家陪护、康复中心预研",
-  ])
+  slide = _content_slide(prs, "数据处理与决策流程")
+  _bullets(
+    slide,
+    [
+      "1. 采集感知帧：摄像头骨架 / 滑块仿真 / 可穿戴 JSON",
+      "2. FallDetector 更新跌倒分数，Emotion/Health 更新标签",
+      "3. RiskEngine 评估等级，状态机切换",
+      "4. DialogueManager 生成回复，CarePlanner 输出 RobotAction 序列",
+      "5. RobotAdapter 下发至仿真日志或 ROS2 /care/robot_cmd",
+    ],
+    size=14,
+  )
 
-  # 12 社会价值
-  slide = _slide_title(prs, "11. 社会价值与应用前景", "Impact")
-  _add_bullets(slide, [
-    "契合智慧养老、适老化改造政策方向",
-    "降低跌倒「发现空窗期」，提升救援效率",
-    "情感陪伴缓解孤独，辅助用药与活动提醒",
-    "模块化部署，可按需启用视觉/LLM/真机",
-    "已开源：https://github.com/FBB123571/ElderCare-Humanoid-Platform",
-  ])
+  _part_divider(prs, "第三部分", "系统实现 · 评测 · 演示")
 
-  # 13 总结
-  slide = _slide_title(prs, "12. 总结与展望", "Conclusion")
-  _add_bullets(slide, [
-    "完成：多模态决策核心 + Web 可视化 + MediaPipe 视觉 + 评测体系",
-    "创新：可解释风险融合 + 紧急闭环 + 人形接口",
-    "展望：真机联调 · 公开数据集 · 多老人交互 · 联邦隐私",
-    "感谢各位评委老师！",
-  ])
+  slide = _content_slide(prs, "Web 控制台与视觉演示")
+  _bullets(
+    slide,
+    [
+      "FastAPI + 现代化 Web 前端，浏览器即可答辩演示",
+      "功能：感知调节 · 实时风险仪表盘 · 对话日志 · 机器人指令流",
+      "摄像头：打开 → 分析当前帧 → MediaPipe 骨架叠加",
+      "一键剧本：日常监测 → 老人倾诉 → 跌倒 → 紧急呼叫",
+      "启动：bash scripts/run_web.sh  →  http://localhost:8765",
+    ],
+    size=14,
+  )
 
-  # 14 Q&A
-  slide = _slide_title(prs, "Q & A", "欢迎提问")
-  _add_bullets(slide, [
-    "演示：Web 控制台 live demo",
-    "代码：GitHub 开源可复现",
-    "联系方式：（请填写团队信息）",
-  ], top=2.5)
+  slide = _content_slide(prs, "实验评测结果")
+  _metrics_table(
+    slide,
+    [
+      ("跌倒检测 Precision（合成6场景）", "100%"),
+      ("跌倒检测 Recall", "100%"),
+      ("跌倒检测 F1", "100%"),
+      ("端到端紧急呼叫触发率", "100%"),
+      ("单帧决策延迟（CPU，无云端LLM）", "< 50 ms"),
+      ("单元测试 + 无头压测", "pytest 全部通过"),
+    ],
+  )
+  _paragraph(slide, "详见 data/evaluation/results/fall_eval_report.json", top=4.35, size=11)
+
+  slide = _content_slide(prs, "开源与知识产权")
+  _bullets(
+    slide,
+    [
+      "GitHub 开源：https://github.com/FBB123571/ElderCare-Humanoid-Platform",
+      "软件名称建议：CareCompanion 智能养老人形陪伴机器人系统 V1.0",
+      "核心代码：care_companion/ · web/ · scripts/ · tests/",
+      "文档：技术报告 · 架构说明 · 部署指南 · 竞赛答辩要点",
+      "（请填写）软著登记号 / 团队成员 / 指导教师",
+    ],
+    size=14,
+  )
+
+  _part_divider(prs, "第四部分", "创新维度与未来展望")
+
+  slide = _content_slide(prs, "创新维度总结")
+  _innovation_table(
+    slide,
+    [
+      ("多模态融合", "跌倒、情绪、健康统一 RiskEngine，输出可解释原因，优于孤立模块堆叠"),
+      ("安全闭环", "紧急事件硬优先级状态机，覆盖对话与常规任务，触发 call_emergency"),
+      ("视觉感知", "MediaPipe 姿态接入 Web 与本地摄像头，非纯滑块仿真"),
+      ("工程化", "仿真/Web/ROS2 共用 Orchestrator；一键评测与无头验证脚本"),
+      ("应用价值", "契合智慧养老政策，降低跌倒发现空窗，支持边缘本地推理保护隐私"),
+    ],
+  )
+
+  slide = _content_slide(prs, "未来工作")
+  _bullets(
+    slide,
+    [
+      "p 对接 Unitree 等人形机器人，完成 speak/gesture/approach 真机视频",
+      "p 引入 UR Fall 等公开数据集，开展泛化评测与误报分析",
+      "p 多老人房间场景、遮挡与光照鲁棒性优化",
+      "p 结合社区/养老院调研，完善产品化与成本评估",
+      "p 申请软件著作权 V1.0，探索专利（跌倒融合决策方法）",
+    ],
+    size=14,
+  )
+
+  slide = _content_slide(prs, "参考文献")
+  _bullets(
+    slide,
+    [
+      "[1] Google MediaPipe Pose: Real-time pose estimation.",
+      "[2] Unitree Robotics SDK / ROS2 documentation.",
+      "[3] 国务院：《「十四五」国家老龄事业发展和养老服务体系规划》.",
+      "[4] CareCompanion 项目文档：docs/TECHNICAL_REPORT.md",
+      "[5] 仓库：github.com/FBB123571/ElderCare-Humanoid-Platform",
+    ],
+    size=12,
+    top=1.35,
+  )
+
+  # 致谢
+  slide = _slide(prs)
+  _bg_white(slide)
+  _header_bar(slide)
+  box = slide.shapes.add_textbox(Inches(0.55), Inches(2.2), Inches(8.9), Inches(1.2))
+  box.text_frame.text = "敬请批评指正"
+  p = box.text_frame.paragraphs[0]
+  p.font.size = Pt(36)
+  p.font.bold = True
+  p.font.color.rgb = DARK
+  p.alignment = PP_ALIGN.CENTER
+  sub = slide.shapes.add_textbox(Inches(0.55), Inches(3.2), Inches(8.9), Inches(0.6))
+  sub.text_frame.text = "CareCompanion 团队 · 感谢各位评委老师"
+  sub.text_frame.paragraphs[0].font.size = Pt(16)
+  sub.text_frame.paragraphs[0].font.color.rgb = GRAY
+  sub.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
 
   OUT.parent.mkdir(parents=True, exist_ok=True)
   prs.save(str(OUT))
-  print(f"✅ 已生成: {OUT}")
+  print(f"✅ 已生成国赛风格 PPT: {OUT}")
+  print(f"   共 {len(prs.slides)} 页")
 
 
 if __name__ == "__main__":
