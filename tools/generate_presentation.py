@@ -23,7 +23,20 @@ GRAY = RGBColor(80, 80, 80)
 LIGHT_BLUE = RGBColor(235, 242, 250)
 
 COMP_LINE1 = "第二十八届中国机器人及人工智能大赛"
-COMP_LINE2 = "机器人创新赛道"
+COMP_LINE2 = "创新赛 · 机器人创新赛道"
+
+# 报名系统信息（CRAIC）
+TEAM_NAME = "从容应队"
+SCHOOL = "中山大学"
+PROVINCE = "广东"
+PROJECT_TITLE = "基于大语言模型的智能养老陪伴机器人仿真平台"
+TEAM_ID = "CRAIC2026-TEAM-8FJQKLMI"
+PROJECT_ID = "CRAIC20264ZEFT1DF"
+CAPTAIN = "刘小凡"
+MEMBER = "白冉"
+ADVISOR = "彭键清"
+ADVISOR_DEPT = "智能科学与技术"
+GITHUB_URL = "https://github.com/FBB123571/ElderCare-Humanoid-Platform"
 
 # 与 main() 中 prs 尺寸一致：16:9 → 10" × 5.625"
 SLIDE_W_IN = 10.0
@@ -290,7 +303,22 @@ def _innovation_table(slide, rows: list[tuple[str, str]]):
         p.font.color.rgb = BLACK
 
 
+def _ensure_qr_code() -> None:
+  qr = ASSETS / "ppt_demo_qr.png"
+  if qr.exists():
+    return
+  try:
+    import qrcode
+
+    img = qrcode.make(GITHUB_URL, box_size=8, border=2)
+    ASSETS.mkdir(parents=True, exist_ok=True)
+    img.save(qr)
+  except ImportError:
+    pass
+
+
 def main():
+  _ensure_qr_code()
   prs = Presentation()
   prs.slide_width = Inches(SLIDE_W_IN)
   prs.slide_height = Inches(SLIDE_H_IN)
@@ -300,29 +328,46 @@ def main():
   slide = _slide(prs)
   _bg_white(slide)
   _header_bar(slide, sw)
-  _title(slide, "CareCompanion", top=1.15, size=34, center=True, color=DARK)
-  _title(
-    slide,
-    "智能养老人形陪伴机器人系统",
-    top=1.78,
-    size=21,
-    center=True,
-    color=BLACK,
-  )
+  _title(slide, "CareCompanion", top=0.95, size=32, center=True, color=DARK)
+  _title(slide, PROJECT_TITLE, top=1.48, size=17, center=True, color=BLACK)
   _paragraph(
     slide,
-    "「感知—决策—执行」一体化的居家养老安全陪伴平台",
-    top=2.45,
-    size=16,
-    width=8.2,
-    bold=True,
+    f"参赛团队：{TEAM_NAME}　|　{SCHOOL}（{PROVINCE}）\n"
+    f"队长 {CAPTAIN}　队员 {MEMBER}　指导教师 {ADVISOR}（{ADVISOR_DEPT}）",
+    top=2.35,
+    size=13,
+    width=8.8,
+    bold=False,
   )
-  for i, t in enumerate([COMP_LINE1, COMP_LINE2]):
-    box = slide.shapes.add_textbox(Inches(0.55), Inches(sh - 0.95 + i * 0.26), Inches(8.9), Inches(0.3))
-    box.text_frame.text = t
-    box.text_frame.paragraphs[0].font.size = Pt(11)
-    box.text_frame.paragraphs[0].font.color.rgb = GRAY
-    box.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+  foot = slide.shapes.add_textbox(Inches(0.55), Inches(sh - 1.05), Inches(8.9), Inches(0.55))
+  tf = foot.text_frame
+  tf.paragraphs[0].text = f"{COMP_LINE1}　·　{COMP_LINE2}"
+  tf.paragraphs[0].font.size = Pt(10)
+  tf.paragraphs[0].font.color.rgb = GRAY
+  tf.paragraphs[0].alignment = PP_ALIGN.CENTER
+  p2 = tf.add_paragraph()
+  p2.text = f"团队编号 {TEAM_ID}　作品编号 {PROJECT_ID}"
+  p2.font.size = Pt(9)
+  p2.font.color.rgb = GRAY
+  p2.alignment = PP_ALIGN.CENTER
+
+  slide = _content_slide(prs, "参赛信息")
+  _bullets(
+    slide,
+    [
+      f"赛项：{COMP_LINE2}",
+      f"团队名称：{TEAM_NAME}",
+      f"学校：{SCHOOL}（{PROVINCE}）",
+      f"作品名称：{PROJECT_TITLE}",
+      f"团队编号：{TEAM_ID}",
+      f"作品编号：{PROJECT_ID}",
+      f"队员：队长 {CAPTAIN}，队员 {MEMBER}",
+      f"指导教师：{ADVISOR}（{ADVISOR_DEPT}）",
+      f"代码仓库：{GITHUB_URL}",
+    ],
+    top=1.28,
+    size=13,
+  )
 
   _part_divider(prs, "第一部分", "项目背景与需求分析")
 
@@ -508,14 +553,15 @@ def main():
   _bullets(
     slide,
     [
-      "GitHub 开源：https://github.com/FBB123571/ElderCare-Humanoid-Platform",
-      "答辩演示：http://localhost:8765（现场端口转发）",
-      "软件名称建议：CareCompanion 智能养老人形陪伴机器人系统 V1.0",
-      "核心代码：care_companion/ · web/ · scripts/ · tests/",
-      "文档：技术报告 · 架构说明 · 部署指南 · 竞赛答辩要点",
-      "（请填写）软著登记号 / 团队成员 / 指导教师",
+      f"开源地址：{GITHUB_URL}",
+      f"参赛团队：{TEAM_NAME}（{SCHOOL}）",
+      f"现场演示：http://localhost:8765（bash scripts/run_web.sh）",
+      "演示录像：docs/assets/demo_carecompanion.mp4",
+      "软件名称：CareCompanion 智能养老人形陪伴机器人系统 V1.0",
+      "软著登记：（申请中 / 按实际填写）",
     ],
-    size=14,
+    top=1.28,
+    size=13,
   )
 
   _part_divider(prs, "第四部分", "创新维度与未来展望")
@@ -561,20 +607,28 @@ def main():
 
   qr_path = ASSETS / "ppt_demo_qr.png"
   if qr_path.exists():
-    slide = _content_slide(prs, "现场演示视频（扫码观看）")
-    qw, qh = _fit_image_inches(qr_path, 2.8, 2.8)
+    slide = _content_slide(prs, "扫码获取代码与演示视频")
+    qw, qh = _fit_image_inches(qr_path, 2.5, 2.5)
     slide.shapes.add_picture(
       str(qr_path),
       Inches((sw - qw) / 2),
-      Inches(1.35),
+      Inches(1.22),
       width=Inches(qw),
       height=Inches(qh),
     )
-    cap = slide.shapes.add_textbox(Inches(0.55), Inches(4.15), Inches(8.9), Inches(0.5))
-    cap.text_frame.paragraphs[0].text = "请扫码观看 3～5 分钟系统演示录像"
-    cap.text_frame.paragraphs[0].font.size = Pt(14)
-    cap.text_frame.paragraphs[0].font.color.rgb = GRAY
-    cap.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+    cap = slide.shapes.add_textbox(Inches(0.45), Inches(3.95), Inches(9.1), Inches(1.1))
+    tf = cap.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = f"扫码进入 GitHub 仓库\n{GITHUB_URL}"
+    p.font.size = Pt(12)
+    p.font.color.rgb = GRAY
+    p.alignment = PP_ALIGN.CENTER
+    p2 = tf.add_paragraph()
+    p2.text = "演示视频：仓库内 docs/assets/demo_carecompanion.mp4"
+    p2.font.size = Pt(11)
+    p2.font.color.rgb = GRAY
+    p2.alignment = PP_ALIGN.CENTER
 
   # 致谢
   slide = _slide(prs)
@@ -588,7 +642,7 @@ def main():
   p.font.color.rgb = DARK
   p.alignment = PP_ALIGN.CENTER
   sub = slide.shapes.add_textbox(Inches(0.55), Inches(sh / 2 + 0.35), Inches(8.9), Inches(0.5))
-  sub.text_frame.text = "CareCompanion 团队 · 感谢各位评委老师"
+  sub.text_frame.text = f"{TEAM_NAME} · {SCHOOL} · 感谢各位评委老师"
   sub.text_frame.paragraphs[0].font.size = Pt(16)
   sub.text_frame.paragraphs[0].font.color.rgb = GRAY
   sub.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
