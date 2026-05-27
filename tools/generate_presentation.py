@@ -455,6 +455,12 @@ def main():
 
   _screenshot_slide(
     prs,
+    "系统界面：MediaPipe 骨架分析（上传照片）",
+    "ppt_mediapipe_pose.png",
+    "上传全身/上半身照片 → 自动叠加骨架关键点 · 计算宽高比 0.48 · 跌倒判定",
+  )
+  _screenshot_slide(
+    prs,
     "系统界面：老人倾诉场景（演示剧本）",
     "ppt_full_dashboard.png",
     "演示场景「老人倾诉」· 风险 0.23 · 机器人主动安抚回复",

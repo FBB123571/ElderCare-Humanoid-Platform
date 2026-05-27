@@ -225,6 +225,7 @@ async function refreshLogs() {
 }
 
 let camStream = null;
+let lastVisionPreviewB64 = null;
 
 async function startCamera() {
   try {
@@ -245,9 +246,13 @@ function applyVisionResult(data) {
   $("dy").value = Math.round(Math.max(-100, Math.min(50, m.dy * 100)));
   updateLabels();
   if (data.preview_jpeg_b64) {
-    $("visionPreview").src = `data:image/jpeg;base64,${data.preview_jpeg_b64}`;
-    $("visionPreview").classList.remove("hidden");
+    lastVisionPreviewB64 = data.preview_jpeg_b64;
+    const preview = $("visionPreview");
+    preview.src = `data:image/jpeg;base64,${data.preview_jpeg_b64}`;
+    preview.classList.remove("hidden");
+    preview.classList.add("is-pose-result");
     $("camVideo").classList.add("hidden");
+    $("btnDownloadPose").classList.remove("hidden");
   }
   const status = $("visionStatus");
   status.classList.toggle("warn", !m.visible);
@@ -295,6 +300,18 @@ async function analyzeUploadedFile(file) {
     return;
   }
   await analyzeVisionBlob(file, file.name);
+}
+
+function downloadPoseImage() {
+  if (!lastVisionPreviewB64) {
+    $("visionStatus").textContent = "请先上传或分析一张照片";
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = `data:image/jpeg;base64,${lastVisionPreviewB64}`;
+  a.download = `carecompanion_pose_${Date.now()}.jpg`;
+  a.click();
+  $("visionStatus").textContent = "已下载完整骨架分析图（原始分辨率，非页面截图）";
 }
 
 async function loadSamplePose() {
@@ -400,6 +417,7 @@ $("visionFile").addEventListener("change", (e) => {
   e.target.value = "";
 });
 $("btnSamplePose").addEventListener("click", loadSamplePose);
+$("btnDownloadPose").addEventListener("click", downloadPoseImage);
 
 $("userText").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
