@@ -1,0 +1,17 @@
+numpy>=1.24
+opencv-python-headless>=4.8
+PyYAML>=6.0
+customtkinter>=5.2
+Pillow>=10.0
+matplotlib>=3.7
+fastapi>=0.110
+uvicorn[standard]>=0.27
+
+# 可选：姿态增强跌倒检测
+# mediapipe>=0.10
+
+# 可选：真实大模型
+# openai>=1.0
+
+# 可选：ROS2 人形部署
+# rclpy

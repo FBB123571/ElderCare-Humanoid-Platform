@@ -1,0 +1,27 @@
+【重要】本项目在 Linux 服务器上，不要在 Windows CMD 里运行 bash 命令！
+
+✅ 推荐：Web 控制台（本机浏览器即可使用）
+-----------------------------------------
+1. 在 Cursor 底部 SSH 终端执行：
+
+   cd /mnt/sdb1/leijh/EnergySnake1/robot/ElderCare-Humanoid-Platform
+   bash scripts/run_web.sh
+
+2. Cursor 菜单：查看 → 端口（Ports），找到 8765，点击「在浏览器中打开」
+   或手动打开：http://localhost:8765
+
+3. 在网页里可以：
+   - 调节心率/血氧/姿态，模拟老人状态
+   - 输入老人话语，看机器人回复
+   - 点「模拟跌倒」或「运行演示剧本」
+   - 查看风险评分、机器人指令
+
+其他验证方式
+------------
+bash scripts/run_headless.sh     # 无界面逻辑验证
+bash scripts/run_gui.sh          # GUI 冒烟（SSH 看不到窗口）
+
+说明
+----
+- Windows CMD 不能运行 bash，请用 Cursor 底部终端。
+- Web 方式最适合 Remote SSH：界面在你 Windows 浏览器里，逻辑在服务器上跑。

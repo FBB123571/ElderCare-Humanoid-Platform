@@ -1,0 +1,33 @@
+system:
+  name: CareCompanion
+  tick_hz: 10
+  language: zh
+
+risk:
+  fall_weight: 0.45
+  emotion_weight: 0.25
+  health_weight: 0.30
+  alert_threshold: 0.65
+  emergency_threshold: 0.85
+
+fall:
+  aspect_ratio_lying: 0.55
+  velocity_threshold: 0.35
+  still_seconds: 2.0
+
+health:
+  hr_min: 50
+  hr_max: 120
+  spo2_min: 92
+  inactivity_minutes: 45
+
+dialogue:
+  provider: mock   # mock | openai_compatible
+  system_prompt: |
+    你是养老人形陪伴机器人 CareCompanion，语气温暖、简洁、可靠。
+    优先关心老人安全与情绪，发现风险时提醒并建议联系家属。
+
+ros2:
+  namespace: care
+  cmd_topic: /care/robot_cmd
+  status_topic: /care/status
