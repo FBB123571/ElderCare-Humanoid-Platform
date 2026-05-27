@@ -12,3 +12,5 @@ logs/
 *.log
 logs/emergency_calls.jsonl
 data/models/*.task
+data/test_*.png
+data/test_*.jpg

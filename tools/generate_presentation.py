@@ -457,7 +457,7 @@ def main():
     prs,
     "系统界面：MediaPipe 骨架分析（上传照片）",
     "ppt_mediapipe_pose.png",
-    "上传全身/上半身照片 → 自动叠加骨架关键点 · 计算宽高比 0.48 · 跌倒判定",
+    "上传全身照后导出骨架叠加图 · 宽高比 0.48 · 支持答辩现场上传演示",
   )
   _screenshot_slide(
     prs,
