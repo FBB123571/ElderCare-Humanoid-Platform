@@ -472,53 +472,71 @@ def _screenshot_duo(prs, title: str, left_img: str, right_img: str, cap_l: str =
 
 
 def _slide_open_source(prs):
-  """开源页：左信息卡片 + 右二维码与演示缩略图（避免 QR 过大）。"""
+  """开源页：左表格 + 右二维码与文字清单（无叠图）。"""
   slide = _content_slide(prs, "开源与可复现性")
 
-  cards = [
-    ("GitHub 仓库", GITHUB_URL),
+  rows = [
+    ("GitHub", GITHUB_URL),
     ("团队", f"{TEAM_NAME}（{SCHOOL}）"),
     ("本地演示", "bash scripts/run_web.sh"),
     ("演示录像", "docs/assets/demo_carecompanion.mp4"),
     ("软著", "申请中"),
   ]
-  card_h = (CONTENT_H - 0.1) / len(cards)
-  for i, (label, value) in enumerate(cards):
-    y = CONTENT_TOP + 0.05 + i * card_h
-    card = slide.shapes.add_shape(1, Inches(COL_L), Inches(y), Inches(COL_L_W), Inches(card_h - 0.08))
-    card.fill.solid()
-    card.fill.fore_color.rgb = LIGHT_BLUE if i % 2 == 0 else WHITE
-    card.line.color.rgb = BORDER
-    lb = slide.shapes.add_textbox(Inches(COL_L + 0.15), Inches(y + 0.06), Inches(1.0), Inches(card_h - 0.12))
-    lp = lb.text_frame.paragraphs[0]
-    lp.text = label
-    _set_para_font(lp, 10, bold=True, color=GRAY)
-    vb = slide.shapes.add_textbox(Inches(COL_L + 1.1), Inches(y + 0.06), Inches(COL_L_W - 1.25), Inches(card_h - 0.12))
-    vp = vb.text_frame.paragraphs[0]
-    vp.text = value
-    vp.word_wrap = True
-    _set_para_font(vp, 10 if len(value) < 40 else 9, color=DARK)
+  n = len(rows)
+  tbl = slide.shapes.add_table(n, 2, Inches(COL_L), Inches(CONTENT_TOP), Inches(COL_L_W), Inches(CONTENT_H)).table
+  tbl.columns[0].width = Inches(0.95)
+  tbl.columns[1].width = Inches(COL_L_W - 0.95)
+  for r, (label, value) in enumerate(rows):
+    _style_cell(tbl.cell(r, 0), label, bg=DARK, fg=WHITE, bold=True, size=9)
+    c1 = tbl.cell(r, 1)
+    c1.text = ""
+    p = c1.text_frame.paragraphs[0]
+    p.text = value
+    p.alignment = PP_ALIGN.LEFT
+    fs = 8 if len(value) > 36 else 9
+    _set_para_font(p, fs, color=DARK)
+    c1.text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    c1.text_frame.word_wrap = True
+    c1.fill.solid()
+    c1.fill.fore_color.rgb = LIGHT_BLUE if r % 2 == 0 else WHITE
+    c1.margin_left = Pt(5)
 
-  _draw_figure_panel(slide, left=COL_R + 0.04, top=FIG_TOP - 0.02, width=COL_R_W - 0.08, height=FIG_TOTAL_H)
+  rx = COL_R + 0.06
+  rw = COL_R_W - 0.12
+  panel = slide.shapes.add_shape(1, Inches(rx), Inches(CONTENT_TOP), Inches(rw), Inches(CONTENT_H))
+  panel.fill.solid()
+  panel.fill.fore_color.rgb = WHITE
+  panel.line.color.rgb = BORDER
+
   qr = ASSETS / "ppt_demo_qr.png"
-  checklist = SCI / "repro_checklist.png"
-  qr_w = 1.65
-  gap = 0.12
-  fig_left = FIG_LEFT
-  fig_top = FIG_TOP
-  fig_h = FIG_TOTAL_H
+  qr_size = 1.55
   if qr.exists():
     _place_figure(
-      slide, qr, left=fig_left, top=fig_top + 0.15,
-      max_w=qr_w, max_h=qr_w + 0.1, caption="扫码访问仓库", fill_ratio=0.92, framed=False,
+      slide, qr, left=rx + (rw - qr_size) / 2, top=CONTENT_TOP + 0.12,
+      max_w=qr_size, max_h=qr_size, caption="", fill_ratio=1.0, framed=False,
     )
-  if checklist.exists():
-    _place_figure(
-      slide, checklist,
-      left=fig_left + qr_w + gap, top=fig_top,
-      max_w=FIG_WIDTH - qr_w - gap, max_h=fig_h,
-      caption="可复现性检查项", fill_ratio=0.92, framed=False,
-    )
+  cap = slide.shapes.add_textbox(Inches(rx), Inches(CONTENT_TOP + 0.12 + qr_size + 0.04), Inches(rw), Inches(0.22))
+  cp = cap.text_frame.paragraphs[0]
+  cp.text = "扫码访问 GitHub 仓库"
+  cp.alignment = PP_ALIGN.CENTER
+  _set_para_font(cp, 9, bold=True, color=DARK)
+
+  checks = [
+    "✓  完整源码与 README",
+    "✓  一键启动脚本 run_web.sh",
+    "✓  fall_eval_report.json",
+    "✓  pytest 单元测试",
+    "○  软著申请中",
+  ]
+  box = slide.shapes.add_textbox(Inches(rx + 0.15), Inches(CONTENT_TOP + 2.05), Inches(rw - 0.3), Inches(1.55))
+  tf = box.text_frame
+  tf.word_wrap = True
+  for i, line in enumerate(checks):
+    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+    p.text = line
+    col = RGBColor(22, 101, 52) if line.startswith("✓") else RGBColor(180, 83, 9)
+    _set_para_font(p, 10, color=col)
+    p.space_after = Pt(5)
 
 
 def _hero_cover(prs):
@@ -589,7 +607,7 @@ def _hero_cover(prs):
   _set_para_font(tp, 9, color=RGBColor(148, 163, 184))
 
 
-def _part_divider(prs, part: str, subtitle: str, preview: list[str], sci_thumb: str = ""):
+def _part_divider(prs, part: str, subtitle: str, preview: list[str], sci_thumb: str = "", asset_thumb: str = ""):
   slide = _slide(prs)
   _bg_white(slide)
   _header_bar(slide)
@@ -641,7 +659,12 @@ def _part_divider(prs, part: str, subtitle: str, preview: list[str], sci_thumb: 
   right_bg.fill.solid()
   right_bg.fill.fore_color.rgb = LIGHT_BLUE
   right_bg.line.fill.background()
-  thumb_path = SCI / sci_thumb if sci_thumb else None
+  if asset_thumb:
+    thumb_path = ASSETS / asset_thumb
+  elif sci_thumb:
+    thumb_path = SCI / sci_thumb
+  else:
+    thumb_path = None
   if thumb_path and thumb_path.exists():
     pad = 0.18
     _place_figure(
@@ -652,60 +675,83 @@ def _part_divider(prs, part: str, subtitle: str, preview: list[str], sci_thumb: 
     )
 
 
-def _screenshot_slide(prs, title: str, image_file: str, caption: str = ""):
+def _screenshot_slide(prs, title: str, image_file: str, caption: str = "", *, large: bool = False):
   slide = _content_slide(prs, title, "系统实拍")
   path = ASSETS / image_file
   left, w = MARGIN, SLIDE_W - 2 * MARGIN
-  top, h = CONTENT_TOP + 0.04, CONTENT_H - 0.08
+  top, h = CONTENT_TOP + 0.02, CONTENT_H - 0.04
+  pad = 0.04 if large else 0.10
   _draw_figure_panel(slide, left=left, top=top, width=w, height=h)
   _place_figure(
     slide, path,
-    left=left + 0.10, top=top + 0.06,
-    max_w=w - 0.20, max_h=h - 0.06,
-    caption=caption, fill_ratio=0.94, framed=False,
+    left=left + pad, top=top + pad * 0.5,
+    max_w=w - 2 * pad, max_h=h - 0.04,
+    caption=caption, fill_ratio=0.98 if large else 0.94, framed=False,
   )
 
 
 def _thanks_slide(prs):
+  """致谢页：居中排版，底部仪表盘 + 二维码并列。"""
   slide = _slide(prs)
   _header_bar(slide)
+  _footer_bar(slide)
   sh = SLIDE_H
 
-  left_w = 4.85
-  left_bg = slide.shapes.add_shape(1, Inches(0), Inches(HEADER_H), Inches(left_w), Inches(sh - HEADER_H))
-  left_bg.fill.solid()
-  left_bg.fill.fore_color.rgb = DARK
-  left_bg.line.fill.background()
+  body = slide.shapes.add_shape(1, Inches(0), Inches(HEADER_H), Inches(SLIDE_W), Inches(sh - HEADER_H - FOOTER_H))
+  body.fill.solid()
+  body.fill.fore_color.rgb = LIGHT_BLUE
+  body.line.fill.background()
+
+  cx = SLIDE_W / 2
+  title_box = slide.shapes.add_textbox(Inches(0.8), Inches(1.05), Inches(SLIDE_W - 1.6), Inches(0.75))
+  tp = title_box.text_frame.paragraphs[0]
+  tp.text = "敬请批评指正"
+  tp.alignment = PP_ALIGN.CENTER
+  _set_para_font(tp, 32, bold=True, color=DARK)
+
+  line = slide.shapes.add_shape(1, Inches(cx - 0.9), Inches(1.82), Inches(1.8), Inches(0.045))
+  line.fill.solid()
+  line.fill.fore_color.rgb = ACCENT
+  line.line.fill.background()
+
+  sub = slide.shapes.add_textbox(Inches(1.2), Inches(2.0), Inches(SLIDE_W - 2.4), Inches(0.95))
+  tf = sub.text_frame
+  for i, line_txt in enumerate([
+    f"{TEAM_NAME} · {SCHOOL}",
+    f"队长 {CAPTAIN}  ·  队员 {MEMBER}",
+    f"指导教师 {ADVISOR}",
+  ]):
+    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+    p.text = line_txt
+    p.alignment = PP_ALIGN.CENTER
+    _set_para_font(p, 13 if i == 0 else 12, bold=(i == 0), color=DARK if i == 0 else GRAY)
+    p.space_after = Pt(4)
+
+  url_box = slide.shapes.add_textbox(Inches(1.5), Inches(2.95), Inches(SLIDE_W - 3.0), Inches(0.28))
+  up = url_box.text_frame.paragraphs[0]
+  up.text = GITHUB_URL
+  up.alignment = PP_ALIGN.CENTER
+  _set_para_font(up, 9, color=DARK)
+
+  row_y = 3.45
+  thumb_w = 3.35
+  qr_s = 1.35
+  gap = 0.35
+  total_w = thumb_w + gap + qr_s
+  x0 = cx - total_w / 2
 
   thumb = ASSETS / "ppt_full_dashboard.png"
   if thumb.exists():
-    _place_figure(slide, thumb, left=0.12, top=HEADER_H + 0.1, max_w=left_w - 0.24, max_h=sh - HEADER_H - 0.2,
-                  caption="系统仪表盘", fill_ratio=0.98)
-
-  rx = left_w
-  right_bg = slide.shapes.add_shape(1, Inches(rx), Inches(HEADER_H), Inches(SLIDE_W - rx), Inches(sh - HEADER_H))
-  right_bg.fill.solid()
-  right_bg.fill.fore_color.rgb = LIGHT_BLUE
-  right_bg.line.fill.background()
-
-  box = slide.shapes.add_textbox(Inches(rx + 0.2), Inches(1.35), Inches(SLIDE_W - rx - 0.4), Inches(0.65))
-  p = box.text_frame.paragraphs[0]
-  p.text = "敬请批评指正"
-  p.alignment = PP_ALIGN.CENTER
-  _set_para_font(p, 30, bold=True, color=DARK)
-
-  sub = slide.shapes.add_textbox(Inches(rx + 0.2), Inches(2.15), Inches(SLIDE_W - rx - 0.4), Inches(1.1))
-  tf = sub.text_frame
-  for i, line in enumerate([f"{TEAM_NAME} · {SCHOOL}", f"{CAPTAIN} · {MEMBER}", f"指导教师 {ADVISOR}"]):
-    para = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-    para.text = line
-    para.alignment = PP_ALIGN.CENTER
-    _set_para_font(para, 13, bold=(i == 0))
-    para.space_after = Pt(6)
-
+    _place_figure(
+      slide, thumb, left=x0, top=row_y, max_w=thumb_w, max_h=1.55,
+      caption="Web 控制台", fill_ratio=0.96, framed=True,
+    )
   qr = ASSETS / "ppt_demo_qr.png"
   if qr.exists():
-    _place_figure(slide, qr, left=rx + 1.5, top=3.35, max_w=1.55, max_h=1.55, caption="GitHub", fill_ratio=1.0)
+    _place_figure(
+      slide, qr, left=x0 + thumb_w + gap, top=row_y + 0.1,
+      max_w=qr_s, max_h=qr_s, caption="GitHub", fill_ratio=1.0, framed=False,
+    )
 
 
 def _slide_qr_dual(prs):
@@ -862,7 +908,7 @@ def main():
      takeaway="紧急流程在演示里能完整走通")
 
   _part_divider(prs, "第三部分", "实现 · 测试 · 演示",
-                ["Web", "视觉", "指标"], sci_thumb="eval_results.png")
+                ["Web", "视觉", "指标"], asset_thumb="ppt_full_dashboard.png")
 
   _slide_lr(prs, "Web 端长什么样", [
     "后端 FastAPI，前端浏览器打开即可",
@@ -871,7 +917,7 @@ def main():
     "内置剧本：日常—倾诉—跌倒",
   ], "ppt_full_dashboard.png", diagram=False, caption="主界面")
 
-  _screenshot_slide(prs, "骨架分析（上传照片）", "ppt_mediapipe_pose.png", "全身照 → 骨架叠加")
+  _screenshot_slide(prs, "骨架分析（上传照片）", "ppt_mediapipe_pose.png", "全身照 → 骨架叠加", large=True)
   _screenshot_duo(prs, "风险与情绪输入", "ppt_risk_panel.png", "ppt_emotion_input.png", "风险面板", "情绪输入")
   _screenshot_duo(prs, "紧急过程记录", "ppt_chat_emergency.png", "ppt_robot_commands.png", "对话日志", "机器人指令")
   _screenshot_slide(prs, "紧急时感知页", "ppt_header_perception.png", "状态切到紧急后的感知区")
@@ -881,7 +927,7 @@ def main():
     "紧急链路脚本跑通率 100%",
     "单帧决策在 CPU 上 < 50ms（见右下图）",
     "单元测试和无头演示都过了",
-  ], "eval_results.png", sci=True, figure_kind="chart", caption="混淆矩阵 + 场景得分",
+  ], "eval_results.png", sci=True, figure_kind="chart", caption="评测结果（6 场景）",
      takeaway="数据：fall_eval_report.json")
 
   _slide_lr(prs, "性能与延迟", [
@@ -901,7 +947,7 @@ def main():
     "视觉用 MediaPipe，不是纯参数滑块",
     "代码和评测脚本都开源",
     "场景对准居家养老",
-  ], "innovation_radar.png", sci=True, figure_kind="chart", caption="创新维度雷达图")
+  ], "innovation_radar.png", sci=True, figure_kind="chart", caption="创新维度自评")
 
   _slide_lr(prs, "后面打算做什么", [
     "对接 Unitree 等人形真机",

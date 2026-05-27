@@ -419,19 +419,23 @@ def fig_eval_results() -> Path:
   details = data.get("details", [])
 
   fig = _fig()
-  ax_cm = fig.add_axes([0.06, 0.14, 0.36, 0.72])
+  # 底部单独留 Metrics 条，避免与坐标轴标签重叠
+  ax_cm = fig.add_axes([0.07, 0.28, 0.38, 0.62])
+  ax_bar = fig.add_axes([0.50, 0.28, 0.46, 0.62])
+  ax_note = fig.add_axes([0.07, 0.06, 0.86, 0.16])
+  ax_note.axis("off")
+
   cm = np.array([[tn, fp], [fn, tp]])
-  im = ax_cm.imshow(cm, cmap="Blues", vmin=0, vmax=max(cm.max(), 1))
+  ax_cm.imshow(cm, cmap="Blues", vmin=0, vmax=max(cm.max(), 1))
   ax_cm.set_xticks([0, 1])
-  ax_cm.set_xticklabels(["预测正常", "预测跌倒"])
+  ax_cm.set_xticklabels(["预测正常", "预测跌倒"], fontsize=9)
   ax_cm.set_yticks([0, 1])
-  ax_cm.set_yticklabels(["真实正常", "真实跌倒"])
+  ax_cm.set_yticklabels(["真实正常", "真实跌倒"], fontsize=9)
   for i in range(2):
     for j in range(2):
-      ax_cm.text(j, i, str(int(cm[i, j])), ha="center", va="center", fontsize=14, fontweight="bold", color=C0)
-  ax_cm.set_title("(a) 混淆矩阵\n(n=6 场景)", fontsize=10, fontweight="bold", color=C0)
+      ax_cm.text(j, i, str(int(cm[i, j])), ha="center", va="center", fontsize=16, fontweight="bold", color=C0)
+  ax_cm.set_title("(a) 混淆矩阵 (n=6)", fontsize=10, fontweight="bold", color=C0, pad=6)
 
-  ax_bar = fig.add_axes([0.46, 0.14, 0.50, 0.72])
   if details:
     short = {
       "standing_normal": "站立",
@@ -441,21 +445,26 @@ def fig_eval_results() -> Path:
       "lying_still": "躺倒",
       "bend_pickup": "弯腰",
     }
-    names = [short.get(d["name"], d["name"][:8]) for d in details]
+    names = [short.get(d["name"], d["name"][:6]) for d in details]
     scores = [d.get("max_score", 0) for d in details]
     colors = [C_RED if d.get("detected") else C2 for d in details]
     ypos = np.arange(len(names))
-    ax_bar.barh(ypos, scores, color=colors, height=0.62, edgecolor=C0, linewidth=0.4)
+    ax_bar.barh(ypos, scores, color=colors, height=0.55, edgecolor=C0, linewidth=0.4)
     ax_bar.set_yticks(ypos)
-    ax_bar.set_yticklabels(names, fontsize=8)
-    ax_bar.tick_params(axis="y", pad=4)
-    ax_bar.set_xlabel(r"$\max S_{\mathrm{fall}}$")
-    ax_bar.set_xlim(0, 1.0)
-    ax_bar.axvline(0.5, color=C_ORANGE, ls="--", lw=1, label="阈值示意")
-    ax_bar.legend(loc="lower right", frameon=False, fontsize=7)
-  ax_bar.set_title("(b) 各场景得分", fontsize=10, fontweight="bold", color=C0)
-  prf = f"P={m.get('precision', 1):.0%}  R={m.get('recall', 1):.0%}  F1={m.get('f1', 1):.0%}"
-  fig.text(0.5, 0.02, prf + "  ·  fall_eval_report.json", ha="center", fontsize=8, color=C_GRAY)
+    ax_bar.set_yticklabels(names, fontsize=9)
+    ax_bar.tick_params(axis="y", pad=6)
+    ax_bar.set_xlabel("跌倒风险得分", fontsize=9, labelpad=4)
+    ax_bar.set_xlim(0, 1.05)
+    ax_bar.axvline(0.5, color=C_ORANGE, ls="--", lw=1.2)
+    ax_bar.text(0.52, 0.02, "阈值 0.5", fontsize=7, color=C_ORANGE, transform=ax_bar.transAxes, ha="left")
+  ax_bar.set_title("(b) 各场景得分", fontsize=10, fontweight="bold", color=C0, pad=6)
+  for spine in ("top", "right"):
+    ax_bar.spines[spine].set_visible(False)
+
+  prf = f"P = {m.get('precision', 1):.0%}    R = {m.get('recall', 1):.0%}    F1 = {m.get('f1', 1):.0%}"
+  ax_note.text(0.5, 0.62, prf, ha="center", va="center", fontsize=11, fontweight="bold", color=C0)
+  ax_note.text(0.5, 0.18, "数据来源：data/evaluation/results/fall_eval_report.json",
+               ha="center", va="center", fontsize=8, color=C_GRAY)
   return _save(fig, "eval_results.png")
 
 
@@ -482,21 +491,26 @@ def fig_latency_bar() -> Path:
 # ── 13. 创新：雷达图 ─────────────────────────────────────────────
 def fig_innovation_radar() -> Path:
   fig = _fig()
-  ax = fig.add_axes([0.12, 0.12, 0.76, 0.76], polar=True)
+  ax = fig.add_axes([0.18, 0.14, 0.64, 0.72], polar=True)
   cats = ["多模态融合", "安全闭环", "视觉检测", "工程可复现", "居家场景"]
   vals = [0.90, 0.94, 0.88, 0.92, 0.91]
   n = len(cats)
   angles = np.linspace(0, 2 * np.pi, n, endpoint=False).tolist()
   vals_c = vals + vals[:1]
   angles_c = angles + angles[:1]
-  ax.plot(angles_c, vals_c, "o-", lw=2, color=C2, ms=6)
-  ax.fill(angles_c, vals_c, alpha=0.22, color=C3)
-  ax.set_xticks(angles)
-  ax.set_xticklabels(cats, fontsize=9)
-  ax.set_ylim(0, 1)
+  ax.plot(angles_c, vals_c, "o-", lw=2, color=C2, ms=5, zorder=3)
+  ax.fill(angles_c, vals_c, alpha=0.18, color=C3, zorder=2)
+  ax.set_ylim(0, 1.18)
   ax.set_yticks([0.25, 0.5, 0.75, 1.0])
-  ax.set_title("创新维度自评（相对）", fontsize=11, fontweight="bold", color=C0, pad=14)
-  ax.grid(color=C_GRID, ls=":")
+  ax.set_yticklabels(["0.25", "0.5", "0.75", "1.0"], fontsize=7, color=C_GRAY)
+  ax.set_xticks(angles)
+  ax.set_xticklabels([])
+  ax.grid(color=C_GRID, ls=":", zorder=0)
+  # 标签画在网格外侧，避免与折线重叠
+  for ang, lab in zip(angles, cats):
+    ha = "left" if np.cos(ang) >= 0 else "right"
+    va = "bottom" if np.sin(ang) >= 0 else "top"
+    ax.text(ang, 1.12, lab, ha=ha, va=va, fontsize=10, fontweight="bold", color=C0, zorder=5)
   return _save(fig, "innovation_radar.png")
 
 
