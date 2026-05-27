@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PIL import Image
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
@@ -23,6 +24,17 @@ LIGHT_BLUE = RGBColor(235, 242, 250)
 
 COMP_LINE1 = "第二十六届中国机器人及人工智能大赛"
 COMP_LINE2 = "机器人创新赛道"
+
+# 16:9 幻灯片默认 10" × 7.5"
+SLIDE_W = 10.0
+SLIDE_H = 7.5
+HEADER_H = 0.55
+SHOT_TITLE_TOP = 0.58
+SHOT_TITLE_H = 0.62
+SHOT_IMG_TOP = 1.38
+SHOT_CAPTION_TOP = 6.72
+SHOT_IMG_MAX_W = 8.9
+SHOT_IMG_MAX_H = 5.15
 
 
 def _slide(prs: Presentation):
@@ -53,9 +65,20 @@ def _header_bar(slide):
   p2.font.color.rgb = RGBColor(200, 220, 255)
 
 
-def _title(slide, text: str, top=0.75, size=26, color=BLACK, center=False):
-  box = slide.shapes.add_textbox(Inches(0.55), Inches(top), Inches(8.9), Inches(0.8))
+def _title(
+  slide,
+  text: str,
+  top=0.75,
+  size=26,
+  color=BLACK,
+  center=False,
+  height=0.8,
+  width=8.9,
+  left=0.55,
+):
+  box = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(height))
   tf = box.text_frame
+  tf.word_wrap = True
   p = tf.paragraphs[0]
   p.text = text
   p.font.size = Pt(size)
@@ -97,21 +120,46 @@ def _content_slide(prs, title: str):
   return slide
 
 
+def _fit_image_inches(path: Path, max_w: float, max_h: float) -> tuple[float, float]:
+  """按最大宽高（英寸）等比缩放，返回 (width_in, height_in)。"""
+  with Image.open(path) as im:
+    px_w, px_h = im.size
+  aspect = px_h / px_w
+  w, h = max_w, max_w * aspect
+  if h > max_h:
+    h = max_h
+    w = max_h / aspect
+  return w, h
+
+
 def _screenshot_slide(prs, title: str, image_file: str, caption: str = ""):
-  """插入答辩截图（置于 docs/assets/）。"""
-  slide = _content_slide(prs, title)
+  """插入答辩截图：标题在上、图片居中、说明在底，避免与标题重叠。"""
+  slide = _slide(prs)
+  _bg_white(slide)
+  _header_bar(slide)
+
   path = ASSETS / image_file
   if not path.exists():
+    _title(slide, title, top=SHOT_TITLE_TOP, size=22, height=SHOT_TITLE_H)
     _paragraph(slide, f"[请将截图放入 docs/assets/{image_file}]", top=2.0, size=14)
     return slide
-  slide.shapes.add_picture(str(path), Inches(0.32), Inches(1.12), width=Inches(9.35))
+
+  img_w, img_h = _fit_image_inches(path, SHOT_IMG_MAX_W, SHOT_IMG_MAX_H)
+  left = (SLIDE_W - img_w) / 2
+  slide.shapes.add_picture(str(path), Inches(left), Inches(SHOT_IMG_TOP), width=Inches(img_w), height=Inches(img_h))
+
   if caption:
-    box = slide.shapes.add_textbox(Inches(0.32), Inches(5.05), Inches(9.35), Inches(0.45))
-    p = box.text_frame.paragraphs[0]
+    box = slide.shapes.add_textbox(Inches(0.4), Inches(SHOT_CAPTION_TOP), Inches(9.2), Inches(0.55))
+    tf = box.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
     p.text = caption
-    p.font.size = Pt(11)
+    p.font.size = Pt(10)
     p.font.color.rgb = GRAY
     p.alignment = PP_ALIGN.CENTER
+
+  # 标题置于最上层，避免被图片遮挡
+  _title(slide, title, top=SHOT_TITLE_TOP, size=21, height=SHOT_TITLE_H, width=9.2, left=0.4)
   return slide
 
 
