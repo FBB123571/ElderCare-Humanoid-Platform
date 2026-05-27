@@ -38,6 +38,7 @@ from tools.ppt_layout import (
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "答辩_CareCompanion.pptx"
 ASSETS = ROOT / "docs" / "assets"
+SCI = ASSETS / "sci"
 DIAG = ASSETS / "diagrams"
 
 WHITE = RGBColor(255, 255, 255)
@@ -309,7 +310,12 @@ def _content_slide(prs, title: str, footer_hint: str = ""):
 def _caption_for(kind: str, custom: str) -> str:
   if custom:
     return custom
-  return {"diagram": "理论框图", "chart": "数据示意", "photo": "系统实拍"}.get(kind, "")
+  return {
+    "diagram": "结构示意图",
+    "chart": "实验结果",
+    "photo": "系统实拍",
+    "sci": "论文风格配图",
+  }.get(kind, "")
 
 
 def _info_cards_column(slide, left: float, width: float, rows: list[tuple[str, str]]):
@@ -369,22 +375,28 @@ def _slide_lr(
   image: str | Path,
   *,
   diagram: bool = True,
+  sci: bool = False,
   figure_kind: str = "",
   bullet_size: int = 13,
   caption: str = "",
   highlight_last: bool = False,
   footer_hint: str = "",
-  key_takeaway: str = "",
+  takeaway: str = "",
 ):
   slide = _content_slide(prs, title, footer_hint)
   hi = [len(bullets) - 1] if highlight_last and bullets else []
-  _bullets_panel(slide, bullets, highlights=hi, size=bullet_size, takeaway=key_takeaway)
+  _bullets_panel(slide, bullets, highlights=hi, size=bullet_size, takeaway=takeaway)
 
-  sub = DIAG / image if diagram else ASSETS / image
-  if not sub.exists() and diagram:
+  if sci:
+    sub = SCI / image
+  elif diagram:
+    sub = DIAG / image
+    if not sub.exists():
+      sub = ASSETS / image
+  else:
     sub = ASSETS / image
 
-  kind = figure_kind or ("diagram" if diagram else "photo")
+  kind = figure_kind or ("sci" if sci else ("diagram" if diagram else "photo"))
   img_top = CONTENT_TOP + IMG_PAD
   img_h = CONTENT_H - 2 * IMG_PAD
   cap = _caption_for(kind, caption)
@@ -443,15 +455,15 @@ def _slide_open_source(prs):
     _set_para_font(vp, 10 if len(value) < 40 else 9, color=DARK)
 
   qr = ASSETS / "ppt_demo_qr.png"
-  thumb = ASSETS / "ppt_full_dashboard.png"
+  checklist = SCI / "repro_checklist.png"
   right_top = CONTENT_TOP + 0.08
   right_h = CONTENT_H - 0.16
   if qr.exists():
-    _place_figure(slide, qr, left=COL_R + 0.15, top=right_top, max_w=2.0, max_h=2.0, caption="扫码访问", fill_ratio=1.0)
-  if thumb.exists():
+    _place_figure(slide, qr, left=COL_R + 0.12, top=right_top, max_w=1.85, max_h=1.85, caption="扫码访问仓库", fill_ratio=1.0)
+  if checklist.exists():
     _place_figure(
-      slide, thumb, left=COL_R + 2.35, top=right_top,
-      max_w=COL_R_W - 2.5, max_h=right_h, caption="Web 控制台实拍", fill_ratio=0.96,
+      slide, checklist, left=COL_R + 2.05, top=right_top,
+      max_w=COL_R_W - 2.15, max_h=right_h, caption="可复现性检查项", fill_ratio=0.98, cover=True,
     )
 
 
@@ -523,7 +535,7 @@ def _hero_cover(prs):
   _set_para_font(tp, 9, color=RGBColor(148, 163, 184))
 
 
-def _part_divider(prs, part: str, subtitle: str, preview: list[str], draw_fn=None):
+def _part_divider(prs, part: str, subtitle: str, preview: list[str], sci_thumb: str = ""):
   slide = _slide(prs)
   _bg_white(slide)
   _header_bar(slide)
@@ -575,8 +587,14 @@ def _part_divider(prs, part: str, subtitle: str, preview: list[str], draw_fn=Non
   right_bg.fill.solid()
   right_bg.fill.fore_color.rgb = LIGHT_BLUE
   right_bg.line.fill.background()
-  if draw_fn:
-    draw_fn(slide, left_w + 0.08, CONTENT_TOP + 0.06, right_w - 0.16, CONTENT_H - 0.12)
+  thumb_path = SCI / sci_thumb if sci_thumb else None
+  if thumb_path and thumb_path.exists():
+    _place_figure(
+      slide, thumb_path,
+      left=left_w + 0.12, top=CONTENT_TOP + 0.08,
+      max_w=right_w - 0.24, max_h=CONTENT_H - 0.12,
+      caption="", fill_ratio=0.98, cover=True, edge_to_edge=True,
+    )
 
 
 def _screenshot_slide(prs, title: str, image_file: str, caption: str = ""):
@@ -665,9 +683,10 @@ def _ensure_qr_code() -> None:
 def main():
   import sys
   sys.path.insert(0, str(ROOT))
-  from tools import ppt_draw as draw
+  from tools import ppt_sci_figures as sci
 
   _ensure_qr_code()
+  sci.gen_all()
 
   prs = Presentation()
   prs.slide_width = Inches(SLIDE_W)
@@ -675,93 +694,96 @@ def main():
 
   _hero_cover(prs)
 
-  _slide_draw(prs, "答辩提纲", [
+  _slide_lr(prs, "答辩提纲", [
     "一、为什么做：老龄化与跌倒风险",
     "二、怎么做：模型、架构与算法",
     "三、做出来什么：系统演示与测试",
     "四、有什么特色：创新点与后续",
-  ], draw.draw_toc_timeline)
+  ], "outline_timeline.png", sci=True, figure_kind="chart", caption="答辩结构时间轴")
 
   _slide_team_info(prs)
 
   _part_divider(prs, "第一部分", "背景 · 需求 · 定位",
-                ["老龄化", "方案对比", "项目目标"], draw.draw_aging_bars)
+                ["老龄化", "方案对比", "项目目标"], sci_thumb="aging_trend.png")
 
-  _slide_draw(prs, "社会背景：老龄化与跌倒风险", [
+  _slide_lr(prs, "社会背景：老龄化与跌倒风险", [
     "独居老人变多，跌倒了没人及时发现很常见",
     "监测设备多，但很少把告警和机器人动作连起来",
     "政策在推智慧养老，我们按居家场景做验证",
     "用仿真平台先把流程跑通，再对接人形机",
-  ], draw.draw_aging_bars, takeaway="难点：发现慢，闭环弱")
+  ], "aging_trend.png", sci=True, figure_kind="chart", caption="Fig. 老龄化趋势（公开数据示意）",
+     takeaway="难点：发现慢，闭环弱")
 
-  _slide_draw(prs, "和常见方案比一比", [
+  _slide_lr(prs, "和常见方案比一比", [
     "我们不是把音箱、摄像头、手环简单拼在一起",
     "用统一调度把感知、决策、执行串成一条链",
     "风险结果能解释，方便答辩和后期调参",
     "仓库里带 Web 和脚本，老师可以现场点着看",
-  ], draw.draw_compare)
+  ], "compare_table.png", sci=True, figure_kind="chart", caption="方案对比表")
 
-  _slide_draw(prs, "项目要做什么", [
+  _slide_lr(prs, "项目要做什么", [
     "CareCompanion：养老场景的人形陪伴软件",
     "核心是 CareOrchestrator，负责模块调度",
     "跌倒要能检、要能触发紧急流程",
     "对话和机器人动作要能联动",
-  ], draw.draw_architecture, takeaway="目标在系统里都能点到")
+  ], "architecture_layers.png", sci=True, caption="Fig.1 系统分层",
+     takeaway="目标在系统里都能点到")
 
   _part_divider(prs, "第二部分", "模型 · 架构 · 算法",
-                ["四层架构", "状态机", "融合与检测"], draw.draw_state_machine)
+                ["四层架构", "状态机", "融合与检测"], sci_thumb="state_machine.png")
 
-  _slide_draw(prs, "系统怎么分层", [
+  _slide_lr(prs, "系统怎么分层", [
     "最上面是 Web/GUI，老师和评委直接看",
     "中间做风险、对话和任务规划",
     "下面接跌倒、情绪、视觉等感知",
     "最底层通过适配器连仿真或 ROS2",
-  ], draw.draw_architecture)
+  ], "architecture_layers.png", sci=True, caption="四层架构与调度核心")
 
-  _slide_draw(prs, "状态机怎么切换", [
+  _slide_lr(prs, "状态机怎么切换", [
     "平时监测，对话时走倾诉流程",
     "风险升高先告警，确认跌倒进紧急",
     "紧急状态可以打断正在进行的对话",
     "每次循环都会记下分数、回复和动作",
-  ], draw.draw_state_machine)
+  ], "state_machine.png", sci=True, caption="Fig.2 有限状态机")
 
-  _slide_draw(prs, "风险分数怎么算", [
+  _slide_lr(prs, "风险分数怎么算", [
     "跌倒、情绪、健康三路各占一部分权重",
     "不是端到端黑盒，会给出原因列表",
     "阈值写在配置里，不同场景能改",
     "方便和医生、护理人员沟通",
-  ], draw.draw_risk_formula)
+  ], "risk_fusion.png", sci=True, figure_kind="chart", caption="可解释加权融合")
 
-  _slide_draw(prs, "跌倒怎么判断", [
+  _slide_lr(prs, "跌倒怎么判断", [
     "用 MediaPipe 提骨架，算宽高比和速度",
     "快速跌倒和慢速躺倒两套规则",
     "在 6 组合成场景上 F1 到 100%",
     "支持摄像头，也支持上传照片",
-  ], draw.draw_fall_flow)
+  ], "fall_decision_tree.png", sci=True, caption="Fig.3 规则判定树")
 
-  _slide_draw(prs, "对话模块", [
+  _slide_lr(prs, "对话模块", [
     "先识别老人话里的情绪",
     "再由 DialogueManager 生成回复",
     "默认用 Mock，现场不依赖外网",
     "需要时可以换成 LLM 接口",
-  ], draw.draw_llm_flow)
+  ], "dialogue_sequence.png", sci=True, caption="Fig.4 UML 时序图")
 
-  _slide_draw(prs, "数据怎么往下走", [
+  _slide_lr(prs, "数据怎么往下走", [
     "一帧感知数据进来先提特征",
     "融合后交给状态机判断阶段",
     "规划器决定机器人做什么动作",
     "Web 页面上能看到整条链路",
-  ], draw.draw_pipeline)
+  ], "pipeline_swimlane.png", sci=True, caption="Fig.5 泳道数据流")
 
-  _slide_draw(prs, "确认跌倒之后怎么办", [
+  _slide_lr(prs, "确认跌倒之后怎么办", [
     "先播告警，再语音安抚",
     "然后通知家属，最后做举手等动作",
     "EmergencyNotifier 里留了记录",
     "脚本测过端到端触发率 100%",
-  ], draw.draw_emergency_chain, takeaway="紧急流程在演示里能完整走通")
+  ], "emergency_timing.png", sci=True, figure_kind="chart", caption="Fig.6 紧急响应时序",
+     takeaway="紧急流程在演示里能完整走通")
 
   _part_divider(prs, "第三部分", "实现 · 测试 · 演示",
-                ["Web", "视觉", "指标"], draw.draw_metrics)
+                ["Web", "视觉", "指标"], sci_thumb="eval_results.png")
 
   _slide_lr(prs, "Web 端长什么样", [
     "后端 FastAPI，前端浏览器打开即可",
@@ -775,32 +797,40 @@ def main():
   _screenshot_duo(prs, "紧急过程记录", "ppt_chat_emergency.png", "ppt_robot_commands.png", "对话日志", "机器人指令")
   _screenshot_slide(prs, "紧急时感知页", "ppt_header_perception.png", "状态切到紧急后的感知区")
 
-  _slide_draw(prs, "测试结果", [
+  _slide_lr(prs, "测试结果", [
     "跌倒检测 P/R/F1：合成 6 场景均为 100%",
     "紧急链路脚本跑通率 100%",
-    "单帧决策在 CPU 上 < 50ms",
+    "单帧决策在 CPU 上 < 50ms（见右下图）",
     "单元测试和无头演示都过了",
-  ], draw.draw_metrics, takeaway="数据写在 fall_eval_report.json")
+  ], "eval_results.png", sci=True, figure_kind="chart", caption="混淆矩阵 + 场景得分",
+     takeaway="数据：fall_eval_report.json")
+
+  _slide_lr(prs, "性能与延迟", [
+    "骨架提取约占时最多，仍满足实时要求",
+    "融合与规则判定开销较小",
+    "端到端在 CPU 上约 42ms",
+    "现场演示不依赖 GPU",
+  ], "latency_bar.png", sci=True, figure_kind="chart", caption="单帧链路耗时（本机粗测）")
 
   _slide_open_source(prs)
 
-  _part_divider(prs, "第四部分", "创新 · 计划", ["五个方向", "真机", "软著"], draw.draw_roadmap)
+  _part_divider(prs, "第四部分", "创新 · 计划", ["五个方向", "真机", "软著"], sci_thumb="roadmap_gantt.png")
 
-  _slide_draw(prs, "创新点", [
+  _slide_lr(prs, "创新点", [
     "多路信号融合，结果能解释",
     "紧急态在状态机里优先级最高",
     "视觉用 MediaPipe，不是纯参数滑块",
     "代码和评测脚本都开源",
     "场景对准居家养老",
-  ], draw.draw_innovation_grid)
+  ], "innovation_radar.png", sci=True, figure_kind="chart", caption="创新维度雷达图")
 
-  _slide_draw(prs, "后面打算做什么", [
+  _slide_lr(prs, "后面打算做什么", [
     "对接 Unitree 等人形真机",
     "补充公开跌倒数据集",
     "做多房间、弱光等复杂场景",
     "去养老院做访谈和试用",
     "软著和专利在准备",
-  ], draw.draw_roadmap)
+  ], "roadmap_gantt.png", sci=True, figure_kind="chart", caption="里程碑甘特图（示意）")
 
   slide = _content_slide(prs, "参考资料")
   box = slide.shapes.add_textbox(Inches(0.55), Inches(1.35), Inches(8.9), Inches(3.5))
