@@ -1,0 +1,32 @@
+"""答辩 PPT 统一版式网格（英寸）。"""
+from __future__ import annotations
+
+SLIDE_W = 10.0
+SLIDE_H = 5.625
+HEADER_H = 0.46
+FOOTER_H = 0.26
+RIBBON_H = 0.36
+
+MARGIN = 0.32
+GUTTER = 0.22
+
+TITLE_TOP = HEADER_H + 0.06
+TITLE_H = 0.52
+
+# 内容区：标题下 → 页脚上
+CONTENT_TOP = TITLE_TOP + TITLE_H + 0.10
+CONTENT_BOTTOM = SLIDE_H - FOOTER_H - 0.08
+CONTENT_H = CONTENT_BOTTOM - CONTENT_TOP  # ≈4.28"
+
+COL_L = MARGIN
+COL_L_W = 4.12
+COL_R = COL_L + COL_L_W + GUTTER  # ≈4.66
+COL_R_W = SLIDE_W - COL_R - MARGIN  # ≈5.02
+
+# 有底部结论条时，正文区略缩短
+BODY_H = CONTENT_H - RIBBON_H - 0.06
+BODY_BOTTOM = CONTENT_TOP + BODY_H
+
+# 右栏配图区（垂直居中）
+IMG_PAD = 0.12
+CAPTION_H = 0.22
