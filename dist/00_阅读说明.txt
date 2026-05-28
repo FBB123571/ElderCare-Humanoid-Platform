@@ -1,0 +1,32 @@
+CareCompanion · CRAIC 2026 完整材料包
+=====================================
+团队：从容应队 | 中山大学
+仓库：https://github.com/FBB123571/ElderCare-Humanoid-Platform
+
+【一、答辩必用】
+  docs/答辩_CareCompanion.pptx          答辩 PPT（36 页，内嵌演示视频）
+  docs/项目任务书.pdf                   项目任务书（正式 PDF 版）
+  docs/assets/demo_full_scenario.mp4    答辩主片（约 47s 四段串联）
+
+【二、分段演示视频】
+  docs/assets/demo_mood_digital_human.mp4      ① 双数字人情景演绎
+  docs/assets/demo_elder_fall_analysis.mp4     ② 跌倒视觉分析
+  docs/assets/demo_ros2_cmd_echo.mp4           ③ ROS2 决策下发
+  docs/assets/demo_isaac_g1_locomotion.mp4     ④ G1 搀扶站起（全仿真）
+  docs/assets/demo_carecompanion.mp4           Web 全流程录像
+
+【三、文档】
+  docs/参赛信息.md、docs/TECHNICAL_REPORT.md、docs/COMPETITION.md 等
+
+【四、源代码与脚本】
+  care_companion/  web/  scripts/  tools/  tests/
+  重新生成 PPT：  python tools/generate_presentation.py
+  重新生成任务书 PDF： python tools/export_taskbook_pdf.py
+  录制全流程视频： bash scripts/merge_demo_full_video.sh
+
+【五、运行 Web 演示】
+  python -m venv .venv && source .venv/bin/activate
+  pip install -r requirements.txt
+  bash scripts/run_web.sh
+
+打包日期：2026-05-28
