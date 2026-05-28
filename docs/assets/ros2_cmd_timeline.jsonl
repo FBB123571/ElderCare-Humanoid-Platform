@@ -1,0 +1,54 @@
+{"t_rel_s": 2.102, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 2.102, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 2.453, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 2.453, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 2.803, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 2.803, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 3.154, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 3.154, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 3.504, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 3.505, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 3.855, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 3.855, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 4.205, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 4.206, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 4.556, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 4.556, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 4.907, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？"}, "json": "{\"command\": \"speak\", \"text\": \"我一直陪着您。要不要听听音乐，或者我帮您联系家人聊聊？\"}"}
+{"t_rel_s": 4.907, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "wave"}, "json": "{\"command\": \"gesture\", \"name\": \"wave\"}"}
+{"t_rel_s": 5.257, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 5.257, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 5.257, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件", "情绪低落(anxious)"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\", \"情绪低落(anxious)\"]}"}
+{"t_rel_s": 5.258, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}
+{"t_rel_s": 5.608, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 5.608, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 5.608, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件", "情绪低落(anxious)"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\", \"情绪低落(anxious)\"]}"}
+{"t_rel_s": 5.608, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}
+{"t_rel_s": 5.959, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 5.959, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 5.959, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件", "情绪低落(anxious)"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\", \"情绪低落(anxious)\"]}"}
+{"t_rel_s": 5.959, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}
+{"t_rel_s": 6.309, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 6.309, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 6.31, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件", "情绪低落(anxious)"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\", \"情绪低落(anxious)\"]}"}
+{"t_rel_s": 6.31, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}
+{"t_rel_s": 6.66, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 6.66, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 6.66, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件", "情绪低落(anxious)"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\", \"情绪低落(anxious)\"]}"}
+{"t_rel_s": 6.66, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}
+{"t_rel_s": 7.011, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 7.011, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 7.011, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件", "情绪低落(anxious)"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\", \"情绪低落(anxious)\"]}"}
+{"t_rel_s": 7.011, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}
+{"t_rel_s": 7.362, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 7.362, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 7.362, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件", "情绪低落(anxious)"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\", \"情绪低落(anxious)\"]}"}
+{"t_rel_s": 7.362, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}
+{"t_rel_s": 7.712, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 7.712, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 7.713, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件", "情绪低落(anxious)"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\", \"情绪低落(anxious)\"]}"}
+{"t_rel_s": 7.713, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}
+{"t_rel_s": 9.814, "topic": "/care/robot_cmd", "data": {"command": "alert_sound", "level": "high"}, "json": "{\"command\": \"alert_sound\", \"level\": \"high\"}"}
+{"t_rel_s": 9.815, "topic": "/care/robot_cmd", "data": {"command": "speak", "text": "检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。"}, "json": "{\"command\": \"speak\", \"text\": \"检测到紧急情况，我已通知家属并播放告警，请保持冷静，援助正在赶来。\"}"}
+{"t_rel_s": 9.815, "topic": "/care/robot_cmd", "data": {"command": "call_emergency", "reasons": ["跌倒事件"]}, "json": "{\"command\": \"call_emergency\", \"reasons\": [\"跌倒事件\"]}"}
+{"t_rel_s": 9.815, "topic": "/care/robot_cmd", "data": {"command": "gesture", "name": "raise_hand"}, "json": "{\"command\": \"gesture\", \"name\": \"raise_hand\"}"}

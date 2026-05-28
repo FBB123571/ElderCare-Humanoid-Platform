@@ -77,6 +77,8 @@ Web 控制台 / 桌面 GUI
 | `python scripts/eval_fall_detection.py` | 跌倒检测评测报告 |
 | `python scripts/run_camera_demo.py` | 本地摄像头 + MediaPipe |
 | `python scripts/run_ros2_bridge.py` | ROS2 指令发布演示 |
+| `bash scripts/record_isaac_g1_demo.sh` | **Isaac Lab 录制 Unitree G1 仿真视频**（见 `docs/ISAAC_VIDEO_PLAN.md`） |
+| `bash scripts/run_full_scenario_demo.sh` | **30s 情景剧总片**（Web+ROS2+G1，见 `docs/SCENARIO_DEMO.md`） |
 | `bash scripts/run_all_checks.sh` | 一键回归检查 |
 
 ---

@@ -721,6 +721,7 @@ def _slide_open_source(prs):
     ("GitHub", GITHUB_URL),
     ("团队", f"{TEAM_NAME}（{SCHOOL}）"),
     ("本地演示", "bash scripts/run_web.sh"),
+    ("情景剧总片", "docs/assets/demo_full_scenario.mp4"),
     ("Web 演示", "docs/assets/demo_carecompanion.mp4"),
     ("G1 仿真", "docs/assets/demo_isaac_g1_locomotion.mp4"),
     ("软著", "申请中"),
@@ -1176,6 +1177,19 @@ def main():
   _screenshot_duo(prs, "紧急过程记录", "ppt_chat_emergency.png", "ppt_robot_commands.png", "对话日志", "机器人指令")
   _screenshot_slide(prs, "紧急时感知页", "ppt_header_perception.png", "状态切到紧急后的感知区")
 
+  _slide_video_embed(
+    prs,
+    "情景剧总片（Web → ROS2 → G1）",
+    "demo_full_scenario.mp4",
+    [
+      "约 30 秒：跌倒紧急 → 指令下发 → 人形行走",
+      "决策层 / 通信层 / 执行层分层展示",
+      "生成：bash scripts/run_full_scenario_demo.sh",
+      "右栏可全屏播放",
+    ],
+    poster_file="ppt_header_perception.png",
+    caption="demo_full_scenario.mp4",
+  )
   _slide_video_embed(
     prs,
     "Web 全流程演示录像",
