@@ -362,6 +362,31 @@ def _fig_caption_below(slide, left: float, top: float, width: float, text: str) 
   _set_para_font(cp, 9, color=GRAY)
 
 
+def _place_column_block(
+  slide,
+  path: Path,
+  *,
+  col_left: float,
+  col_w: float,
+  panel_top: float,
+  panel_h: float,
+  caption: str = "",
+  fill_ratio: float = 0.98,
+) -> None:
+  """单栏：图片+图注作为整体在面板内垂直居中（双栏高度一致、图注跟图走）。"""
+  if not path.exists():
+    return
+  cap_h, cap_gap = 0.24, 0.06
+  max_img_h = max(0.8, panel_h - cap_h - cap_gap - 0.12)
+  w, h = _fit_image(path, col_w * fill_ratio, max_img_h)
+  block_h = h + (cap_gap + cap_h if caption else 0)
+  y_img = panel_top + max(0.04, (panel_h - block_h) / 2)
+  x_img = col_left + (col_w - w) / 2
+  slide.shapes.add_picture(str(path), Inches(x_img), Inches(y_img), width=Inches(w), height=Inches(h))
+  if caption:
+    _fig_caption_below(slide, col_left, y_img + h + cap_gap, col_w, caption)
+
+
 def _place_right_figure(slide, path: Path, *, caption: str = "") -> None:
   """标准左文右图页的右栏配图（图体与图注分区）。"""
   panel_left = COL_R + 0.04
@@ -628,28 +653,21 @@ def _slide_skeleton_annotated(prs):
 
 
 def _screenshot_duo(prs, title: str, left_img: str, right_img: str, cap_l: str = "", cap_r: str = ""):
-  """双截图页：大图顶对齐，图注紧贴图下（避免中间空白与图注压图）。"""
+  """双截图页：每栏图片+图注整体垂直居中，避免左右高度不齐。"""
   slide = _content_slide(prs, title, "系统实拍")
   gap = 0.12
   half = (SLIDE_W - 2 * MARGIN - gap) / 2
-  cap_h = 0.24
   panel_h = CONTENT_H - 0.06
-  img_h = panel_h - cap_h - 0.10
   top = CONTENT_TOP + 0.04
   pad = 0.05
   for i, (img, cap) in enumerate([(left_img, cap_l), (right_img, cap_r)]):
     col_l = MARGIN + i * (half + gap)
     _draw_figure_panel(slide, left=col_l, top=top, width=half, height=panel_h)
-    inner_l = col_l + pad
-    inner_w = half - 2 * pad
-    path = ASSETS / img
-    if not path.exists():
-      continue
-    _, _, _, ih = _place_image_only(
-      slide, path, left=inner_l, top=top + pad, max_w=inner_w, max_h=img_h, fill_ratio=0.98,
+    _place_column_block(
+      slide, ASSETS / img,
+      col_left=col_l + pad, col_w=half - 2 * pad,
+      panel_top=top, panel_h=panel_h, caption=cap, fill_ratio=0.98,
     )
-    if cap and ih > 0:
-      _fig_caption_below(slide, inner_l, top + pad + ih + 0.05, inner_w, cap)
   return slide
 
 
@@ -960,25 +978,21 @@ def _slide_qr_dual(prs):
   demo = ASSETS / "ppt_header_perception.png"
   if not demo.exists():
     demo = ASSETS / "ppt_full_dashboard.png"
-  gap = 0.16
-  cap_h = 0.26
-  img_top = FIG_TOP + 0.08
-  img_body = FIG_BODY_H - cap_h - 0.10
-  qr_col_w = 1.75
+  gap = 0.14
+  panel_top = FIG_TOP + 0.04
+  panel_h = FIG_TOTAL_H - 0.08
+  qr_col_w = 1.82
   web_col_w = FIG_WIDTH - qr_col_w - gap
   if qr.exists():
-    _, _, _, qh = _place_image_only(
-      slide, qr, left=FIG_LEFT, top=img_top, max_w=qr_col_w, max_h=min(1.55, img_body), fill_ratio=0.95,
+    _place_column_block(
+      slide, qr, col_left=FIG_LEFT, col_w=qr_col_w,
+      panel_top=panel_top, panel_h=panel_h, caption="仓库二维码", fill_ratio=0.96,
     )
-    if qh > 0:
-      _fig_caption_below(slide, FIG_LEFT, img_top + qh + 0.04, qr_col_w, "仓库二维码")
   if demo.exists():
-    web_left = FIG_LEFT + qr_col_w + gap
-    _, _, _, dh = _place_image_only(
-      slide, demo, left=web_left, top=img_top, max_w=web_col_w, max_h=img_body, fill_ratio=0.98,
+    _place_column_block(
+      slide, demo, col_left=FIG_LEFT + qr_col_w + gap, col_w=web_col_w,
+      panel_top=panel_top, panel_h=panel_h, caption="Web 感知界面", fill_ratio=0.98,
     )
-    if dh > 0:
-      _fig_caption_below(slide, web_left, img_top + dh + 0.04, web_col_w, "Web 感知界面")
 
 
 def _ensure_qr_code() -> None:

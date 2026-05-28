@@ -221,8 +221,9 @@ def fig_architecture_layers() -> Path:
   for title, sub, col, y in layers:
     ax.add_patch(FancyBboxPatch((lx, y), lw, bh, boxstyle="round,pad=0.02", fc="#f7fafc", ec=col, lw=2))
     ax.add_patch(Rectangle((lx, y), 0.11, bh, fc=col, ec="none"))
-    ax.text(lx + 0.16, y + 0.38, title, fontsize=9.5, fontweight="bold", va="center", color=C0)
-    ax.text(lx + 0.16, y + 0.17, sub, fontsize=8, va="center", color=C_GRAY)
+    yc = y + bh / 2
+    ax.text(lx + 0.16, yc, title, fontsize=9.5, fontweight="bold", va="center", ha="left", color=C0)
+    ax.text(lx + 1.55, yc, sub, fontsize=8, va="center", ha="left", color=C_GRAY)
     cx = lx + lw + 0.18
     cy = y + bh / 2
     ax.annotate("", xy=(3.72, cy), xytext=(lx + lw, cy),
@@ -349,32 +350,33 @@ def fig_fall_decision_tree() -> Path:
   return _save(fig, "fall_decision_tree.png")
 
 
-# ── 7b. 项目目标：架构 + 状态机（调度条置顶，无叠字） ─────────────
+# ── 7b. 项目目标：架构 + 状态机（调度条置顶，标题/副标题分列） ───
 def fig_project_goals_combo() -> Path:
   fig = _fig()
-  ax1 = fig.add_axes([0.04, 0.51, 0.92, 0.43])
-  ax2 = fig.add_axes([0.04, 0.05, 0.92, 0.42])
+  ax1 = fig.add_axes([0.03, 0.48, 0.94, 0.46])
+  ax2 = fig.add_axes([0.03, 0.04, 0.94, 0.42])
   ax1.set_xlim(0, 10)
-  ax1.set_ylim(0, 6)
+  ax1.set_ylim(0, 10)
   ax1.axis("off")
-  ax1.text(0.15, 5.55, "系统四层架构", fontsize=12, fontweight="bold", color=C0, ha="left")
-  ax1.add_patch(FancyBboxPatch((0.35, 4.78), 9.3, 0.58, boxstyle="round,pad=0.03", fc=C0, ec=C0))
-  ax1.text(5.0, 5.07, "CareOrchestrator · 模块调度中枢", ha="center", va="center",
-           fontsize=10.5, color="white", fontweight="bold")
+  ax1.text(0.2, 9.55, "系统四层架构", fontsize=11, fontweight="bold", color=C0, ha="left")
+  ax1.add_patch(FancyBboxPatch((0.35, 8.50), 9.3, 0.62, boxstyle="round,pad=0.03", fc=C0, ec=C0))
+  ax1.text(5.0, 8.81, "CareOrchestrator · 模块调度中枢", ha="center", va="center",
+           fontsize=10, color="white", fontweight="bold")
   layers = [
     ("L4 交互层", "Web / GUI", C3),
     ("L3 认知层", "风险 · 对话 · 规划", C2),
     ("L2 感知层", "跌倒 · 情绪 · 视觉", C1),
     ("L1 执行层", "机器人 / ROS2", C0),
   ]
-  bh, gap = 0.82, 0.08
-  y0 = 3.78
+  bh, gap = 0.68, 0.10
+  y_top = 8.35
   for i, (t, sub, col) in enumerate(layers):
-    y = y0 - i * (bh + gap)
+    y = y_top - (i + 1) * bh - i * gap
     ax1.add_patch(FancyBboxPatch((0.35, y), 9.3, bh, boxstyle="round,pad=0.02", fc="#f7fafc", ec=col, lw=1.8))
-    ax1.add_patch(Rectangle((0.35, y), 0.20, bh, fc=col))
-    ax1.text(0.68, y + bh * 0.70, t, fontsize=10, fontweight="bold", color=C0, va="center", ha="left")
-    ax1.text(0.68, y + bh * 0.28, sub, fontsize=9, color=C_GRAY, va="center", ha="left")
+    ax1.add_patch(Rectangle((0.35, y), 0.18, bh, fc=col))
+    yc = y + bh / 2
+    ax1.text(0.68, yc, t, fontsize=9.5, fontweight="bold", color=C0, va="center", ha="left")
+    ax1.text(2.85, yc, sub, fontsize=9, color=C_GRAY, va="center", ha="left")
 
   ax2.text(0.15, 5.55, "状态机切换", fontsize=12, fontweight="bold", color=C0, ha="left")
   _draw_state_machine(ax2, compact=True)
