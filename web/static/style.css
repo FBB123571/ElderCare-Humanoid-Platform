@@ -470,6 +470,7 @@ textarea::placeholder { color: var(--muted); }
   border: 1px dashed var(--border); color: var(--muted); background: rgba(15,23,42,.4);
 }
 .sample-chip:hover { border-color: #38bdf8; color: #7dd3fc; }
+.sample-chip--pending { opacity: 0.55; border-style: dashed; }
 .video-alert {
   margin-top: 12px; padding: 12px 14px; border-radius: 12px;
   background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.35);
@@ -490,9 +491,102 @@ textarea::placeholder { color: var(--muted); }
   display: block; height: 100%; background: linear-gradient(90deg, #38bdf8, #34d399);
 }
 
+.mood-theater {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.mood-theater-hint {
+  font-size: 0.78rem; color: var(--muted); margin: 0 0 12px;
+}
+.mood-dh-stage { min-height: 240px; }
+.mood-dh-script { height: 220px; }
+
 .dh-stage {
   display: grid; grid-template-columns: 140px 1fr; gap: 16px; min-height: 280px;
 }
+.dual-dh-stage {
+  display: grid;
+  grid-template-columns: 120px 1fr 120px;
+  gap: 12px;
+  min-height: 300px;
+  align-items: end;
+}
+@media (max-width: 900px) {
+  .dual-dh-stage {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+}
+.dh-figure {
+  display: flex; flex-direction: column; align-items: center;
+  margin: 0; padding: 8px 4px;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+.dh-figure.speaking {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.55));
+}
+.fig-body {
+  position: relative; width: 88px; height: 168px;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.35));
+}
+.fig-head {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(160deg, #ffe8d0 0%, #e8c4a0 100%);
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  z-index: 2;
+}
+.elder-fig .fig-head { background: linear-gradient(160deg, #fff0e0, #d4b896); }
+.comp-fig .fig-head { background: linear-gradient(160deg, #fff5e0, #f5d08a); }
+.fig-cap {
+  position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+  width: 36px; height: 10px; border-radius: 4px 4px 0 0;
+  background: #bae6fd; border: 1px solid #7dd3fc;
+}
+.fig-torso {
+  position: absolute; top: 44px; left: 50%; transform: translateX(-50%);
+  width: 58px; height: 64px; border-radius: 16px 16px 12px 12px;
+  box-shadow: inset 0 -8px 16px rgba(0,0,0,.15);
+}
+.elder-fig .fig-torso {
+  background: linear-gradient(180deg, #94a3b8 0%, #475569 55%, #334155 100%);
+}
+.comp-fig .fig-torso {
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 55%, #0369a1 100%);
+}
+.fig-torso::after {
+  content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  width: 18px; height: 36px; border-radius: 6px;
+  background: rgba(255,255,255,.35);
+}
+.fig-arms {
+  position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
+  width: 76px; height: 8px; background: transparent;
+  box-shadow: -34px 0 0 0 #475569, 34px 0 0 0 #475569;
+}
+.comp-fig .fig-arms { box-shadow: -34px 0 0 0 #0369a1, 34px 0 0 0 #0369a1; }
+.fig-legs {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 48px; height: 48px; display: flex; justify-content: space-between;
+}
+.fig-legs i {
+  display: block; width: 10px; height: 44px; border-radius: 6px;
+  background: inherit;
+}
+.elder-fig .fig-legs i { background: #475569; }
+.comp-fig .fig-legs i { background: #0369a1; }
+.fig-name { margin-top: 8px; font-size: 0.82rem; font-weight: 600; color: #e2e8f0; }
+.fig-mood-tag {
+  font-size: 0.68rem; padding: 2px 8px; border-radius: 6px; margin-top: 4px;
+  background: rgba(56,189,248,.12); color: #7dd3fc;
+}
+.elder-fig[data-mood="sad"] .fig-head { filter: saturate(0.75); }
+.elder-fig[data-mood="anxious"] .fig-torso,
+.elder-fig[data-mood="emergency"] .fig-torso { background: linear-gradient(180deg, #b45309, #7f1d1d); }
+.comp-fig[data-mood="emergency"] .fig-torso { background: linear-gradient(180deg, #ef4444, #b91c1c); }
+.comp-fig[data-mood="happy"] .fig-torso { background: linear-gradient(180deg, #22c55e, #15803d); }
+.dual-script { height: 260px; min-height: 200px; }
 @media (max-width: 700px) {
   .dh-stage { grid-template-columns: 1fr; }
 }

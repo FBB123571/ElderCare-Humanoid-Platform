@@ -1,5 +1,8 @@
-# 推荐在线样片（直链 mp4；若失效可换上传本地文件）
+# 推荐在线样片（直链 mp4）；自采跌倒请放 docs/assets/samples/elder_fall_wechat.mp4 后运行 scripts/run_elder_fall_demo.sh
 fall:
+  - name: 自采-老人跌倒（WeChat，需先 scp 到 samples/）
+    local: docs/assets/samples/elder_fall_wechat.mp4
+    note: 分析录屏输出 docs/assets/demo_elder_fall_analysis.mp4；Web 端可直接上传同文件
   - name: 公开样片-人物活动（测试管线）
     url: https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4
     note: 非真实跌倒，用于验证「能拉取并分析」；答辩请换真实跌倒片段 URL
@@ -8,6 +11,9 @@ fall:
     note: 同上，可替换为自采跌倒视频直链
 
 mood:
+  - name: 自采-老人跌倒（联演心情+跌倒转折）
+    local: docs/assets/samples/elder_fall_wechat.mp4
+    note: 分析后小护按情绪轨迹对话，跌倒段自动插入「哎哟」与紧急响应
   - name: 公开样片-对话氛围
     url: https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4
     note: 用于情绪轨迹演示（运动/姿态启发式）

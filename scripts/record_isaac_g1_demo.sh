@@ -202,7 +202,7 @@ LATEST_MP4=""
 SEARCH_ROOTS=("$ISAACLAB/logs/rsl_rl" "$ISAACLAB/checkpoints")
 for _root in "${SEARCH_ROOTS[@]}"; do
   if [[ -d "$_root" ]]; then
-    _found="$(find "$_root" -type f -path '*/videos/play/*.mp4' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || true)"
+    _found="$(find "$_root" -type f \( -path '*/videos/play/rl-video-elder-rescue.mp4' -o -path '*/videos/play/*.mp4' \) -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || true)"
     if [[ -n "$_found" && -f "$_found" ]]; then
       LATEST_MP4="$_found"
     fi
@@ -222,8 +222,21 @@ if [[ -z "$LATEST_MP4" || ! -f "$LATEST_MP4" ]]; then
   exit 1
 fi
 
+RAW="$OUT_DIR/demo_isaac_g1_locomotion_raw.mp4"
 DEST="$OUT_DIR/demo_isaac_g1_locomotion.mp4"
-cp -f "$LATEST_MP4" "$DEST"
-echo "✅ 已复制: $DEST"
-echo "   源文件: $LATEST_MP4"
-ls -lh "$DEST"
+cp -f "$LATEST_MP4" "$RAW"
+echo "✅ 原始录屏: $RAW"
+if [[ "${DUAL_SIM:-0}" == "1" && "${SKIP_DUAL_POST:-0}" == "1" ]]; then
+  echo "   全仿真原始片 → $RAW（后处理另跑）"
+elif [[ "${DUAL_SIM:-0}" == "1" ]]; then
+  cp -f "$RAW" "$DEST"
+  echo "   全仿真双角色，跳过实拍合成"
+elif [[ -x "$ROOT/.venv/bin/python" ]]; then
+  "$ROOT/.venv/bin/python" "$ROOT/scripts/render_g1_home_rescue_video.py" \
+    || "$ROOT/.venv/bin/python" "$ROOT/scripts/render_g1_scenario_video.py" \
+    || cp -f "$RAW" "$DEST"
+else
+  python3 "$ROOT/scripts/render_g1_home_rescue_video.py" || cp -f "$RAW" "$DEST"
+fi
+echo "   Isaac 源: $LATEST_MP4"
+ls -lh "$RAW" "$DEST"

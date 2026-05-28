@@ -433,13 +433,39 @@ const MOOD_LABELS = { neutral: "平静", happy: "开心", sad: "低落", anxious
 
 let videoMode = "fall";
 
-function setDhAvatar(mood) {
-  $("dhAvatar").dataset.mood = mood || "neutral";
-  $("dhMoodTag").textContent = MOOD_LABELS[mood] || mood || "平静";
+function setDualFigures({ elderMood, compMood, speaker } = {}) {
+  const pairs = [
+    ["dhElderFig", "dhElderMood", elderMood],
+    ["dhCompFig", "dhCompMood", compMood],
+    ["moodElderFig", "moodElderMood", elderMood],
+    ["moodCompFig", "moodCompMood", compMood],
+  ];
+  pairs.forEach(([figId, tagId, mood]) => {
+    const fig = $(figId);
+    if (!fig) return;
+    if (mood !== undefined) {
+      fig.dataset.mood = mood || "neutral";
+      const tag = $(tagId);
+      if (tag) tag.textContent = MOOD_LABELS[mood] || mood || "平静";
+    }
+    fig.classList.remove("speaking");
+    if (speaker === "elder" && figId.includes("Elder")) fig.classList.add("speaking");
+    if (speaker === "companion" && figId.includes("Comp")) fig.classList.add("speaking");
+  });
 }
 
-function appendDhLine(type, text, speaker) {
-  const box = $("dhScript");
+function setDhAvatar(mood, speaker) {
+  const m = mood || "neutral";
+  if (speaker === "elder") {
+    setDualFigures({ elderMood: m, compMood: $("dhCompFig")?.dataset.mood || m, speaker: "elder" });
+  } else {
+    setDualFigures({ elderMood: $("dhElderFig")?.dataset.mood || "neutral", compMood: m, speaker: speaker || "companion" });
+  }
+}
+
+function appendDhLine(type, text, speaker, boxEl) {
+  const box = boxEl || $("dhScript");
+  if (!box) return;
   const empty = box.querySelector(".chat-empty");
   if (empty) empty.remove();
   const div = document.createElement("div");
@@ -448,6 +474,19 @@ function appendDhLine(type, text, speaker) {
   div.textContent = who + text;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
+  if (type === "elder") setDualFigures({ speaker: "elder", elderMood: $("dhElderFig")?.dataset.mood });
+  if (type === "companion") setDualFigures({ speaker: "companion", compMood: $("dhCompFig")?.dataset.mood });
+}
+
+function syncVideoTabUi() {
+  const mood = videoMode === "mood";
+  document.querySelectorAll(".video-fall-actions").forEach((el) => el.classList.toggle("hidden", mood));
+  document.querySelectorAll(".video-mood-actions").forEach((el) => el.classList.toggle("hidden", !mood));
+  $("videoFallBlock")?.classList.toggle("hidden", mood);
+  $("videoMoodBlock")?.classList.toggle("hidden", !mood);
+  $("videoStatus").textContent = mood
+    ? "上传 mp4 或选样片 · 分析后小护按情绪轨迹与老人对话演戏"
+    : "支持公开样片或自采 mp4；分析后自动触发紧急决策（跌倒模式）";
 }
 
 async function loadVideoSamples() {
@@ -461,9 +500,12 @@ async function loadVideoSamples() {
     chip.type = "button";
     chip.className = "sample-chip";
     chip.textContent = s.name;
-    chip.title = s.note || s.url;
+    chip.title = s.note || s.url || s.local || "";
+    if (s.local && !s.ready) chip.classList.add("sample-chip--pending");
     chip.addEventListener("click", () => {
-      $("videoUrl").value = s.url;
+      if (s.local && s.ready) $("videoUrl").value = s.local;
+      else if (s.url) $("videoUrl").value = s.url;
+      else $("videoStatus").textContent = "请先将样片放到 docs/assets/samples/（见 README）或上传 mp4";
     });
     box.appendChild(chip);
   });
@@ -511,7 +553,7 @@ async function analyzeVideo(mode) {
       await refreshLogs();
     }
   }
-  if (emo.scores) {
+  if (emo.scores && (mode === "emotion" || mode === "both")) {
     const chart = $("videoEmotionChart");
     chart.classList.remove("hidden");
     chart.innerHTML = "<strong>情绪分布（视频启发式）</strong>";
@@ -524,6 +566,71 @@ async function analyzeVideo(mode) {
     setEmotion(emo.dominant || "neutral");
     setDhAvatar(emo.dominant);
   }
+  if (mode === "emotion") {
+    await moodDhAct();
+  }
+}
+
+function handleDhStreamEvent(msg, scriptBox) {
+  if (msg.type === "error") {
+    appendDhLine("system", msg.text, "", scriptBox);
+    return "error";
+  }
+  if (msg.type === "stage") {
+    appendDhLine("stage", msg.text, msg.speaker, scriptBox);
+  } else if (msg.type === "elder") {
+    appendDhLine("elder", msg.text, msg.speaker, scriptBox);
+    setDualFigures({ speaker: "elder", elderMood: "sad" });
+  } else if (msg.type === "companion") {
+    appendDhLine("companion", msg.text, msg.speaker, scriptBox);
+    setDhAvatar(msg.avatar || "neutral", "companion");
+    if (msg.tick) {
+      renderTick(msg.tick);
+      refreshLogs();
+    }
+  } else if (msg.type === "done") {
+    setDhAvatar(msg.avatar || "neutral", null);
+    setDualFigures({ speaker: null });
+    appendDhLine("system", "情景剧结束", "", scriptBox);
+    return "done";
+  }
+  return null;
+}
+
+let moodActing = false;
+
+async function moodDhAct() {
+  if (moodActing) return;
+  const scriptBox = $("moodDhScript");
+  if (!scriptBox) return;
+  moodActing = true;
+  $("btnMoodAct").disabled = true;
+  $("btnVideoMood").disabled = true;
+  scriptBox.innerHTML = "";
+  appendDhLine("system", "正在根据视频心情轨迹编排对话…", "", scriptBox);
+
+  return new Promise((resolve) => {
+    const es = new EventSource("/api/digital_human/mood_act");
+    es.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      const state = handleDhStreamEvent(msg, scriptBox);
+      if (state === "done" || state === "error") {
+        es.close();
+        moodActing = false;
+        $("btnMoodAct").disabled = false;
+        $("btnVideoMood").disabled = false;
+        resolve();
+      }
+    };
+    es.onerror = () => {
+      es.close();
+      moodActing = false;
+      $("btnMoodAct").disabled = false;
+      $("btnVideoMood").disabled = false;
+      appendDhLine("system", "连接中断，请先完成心情分析", "", scriptBox);
+      resolve();
+    };
+  });
 }
 
 async function dhSend() {
@@ -536,9 +643,18 @@ async function dhSend() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: msg, emotion: $("emotion").value }),
     });
-    const data = await res.json();
-    if (!data.ok) {
-      appendDhLine("system", data.error || "发送失败", "");
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      data = { ok: false, error: `HTTP ${res.status}` };
+    }
+    if (!res.ok || !data.ok) {
+      const hint =
+        res.status === 404
+          ? "接口未找到：请在服务器执行 bash scripts/run_web.sh 重启 Web"
+          : data.error || data.detail || `HTTP ${res.status}`;
+      appendDhLine("system", hint, "");
       return;
     }
     appendDhLine("elder", msg, "老人");
@@ -560,28 +676,17 @@ async function dhAct() {
   if (dhActing) return;
   dhActing = true;
   $("btnDhAct").disabled = true;
-  $("dhScript").innerHTML = "";
+  const scriptBox = $("dhScript");
+  scriptBox.innerHTML = "";
   await fetch("/api/reset", { method: "POST" });
   const es = new EventSource("/api/digital_human/act");
   es.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
-    if (msg.type === "stage") {
-      appendDhLine("stage", msg.text, msg.speaker);
-    } else if (msg.type === "elder") {
-      appendDhLine("elder", msg.text, msg.speaker);
-    } else if (msg.type === "companion") {
-      appendDhLine("companion", msg.text, msg.speaker);
-      setDhAvatar(msg.avatar || "neutral");
-      if (msg.tick) {
-        renderTick(msg.tick);
-        refreshLogs();
-      }
-    } else if (msg.type === "done") {
+    const state = handleDhStreamEvent(msg, scriptBox);
+    if (state === "done" || state === "error") {
       es.close();
       dhActing = false;
       $("btnDhAct").disabled = false;
-      setDhAvatar(msg.avatar || "neutral");
-      appendDhLine("system", "情景剧结束", "");
     }
   };
   es.onerror = () => {
@@ -596,12 +701,14 @@ document.querySelectorAll(".video-tab").forEach((tab) => {
     document.querySelectorAll(".video-tab").forEach((t) => t.classList.remove("active"));
     tab.classList.add("active");
     videoMode = tab.dataset.vtab;
+    syncVideoTabUi();
     loadVideoSamples();
   });
 });
 
 $("btnVideoFall").addEventListener("click", () => analyzeVideo("fall"));
 $("btnVideoMood").addEventListener("click", () => analyzeVideo("emotion"));
+$("btnMoodAct").addEventListener("click", () => moodDhAct());
 $("btnDhSend").addEventListener("click", dhSend);
 $("btnDhAct").addEventListener("click", dhAct);
 $("dhInput").addEventListener("keydown", (e) => {
@@ -611,6 +718,7 @@ $("dhInput").addEventListener("keydown", (e) => {
   }
 });
 
+syncVideoTabUi();
 loadVideoSamples();
 
 fetch("/api/health")

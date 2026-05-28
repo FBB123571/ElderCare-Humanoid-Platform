@@ -47,7 +47,11 @@ def index():
 
 @app.get("/api/health")
 def health():
-  return {"ok": True, "service": "CareCompanion Web", "features": ["video_url", "digital_human"]}
+  return {
+    "ok": True,
+    "service": "CareCompanion Web",
+    "features": ["video_url", "digital_human", "mood_acting"],
+  }
 
 
 @app.post("/api/reset")
@@ -130,6 +134,17 @@ async def digital_human_act():
 
   async def event_gen():
     async for item in SESSION.stream_acting():
+      yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+
+  return StreamingResponse(event_gen(), media_type="text/event-stream")
+
+
+@app.get("/api/digital_human/mood_act")
+async def digital_human_mood_act():
+  """根据最近一次视频心情分析结果，驱动老人↔小护情景剧（SSE）。"""
+
+  async def event_gen():
+    async for item in SESSION.stream_mood_acting():
       yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
 
   return StreamingResponse(event_gen(), media_type="text/event-stream")

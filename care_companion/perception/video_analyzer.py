@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import base64
+import logging
+import subprocess
 from pathlib import Path
 
 import cv2
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from care_companion.perception.emotion_recognizer import EmotionRecognizer
 from care_companion.perception.pose_pipeline import PosePipeline
@@ -40,7 +44,7 @@ class VideoAnalyzer:
   def __init__(self, cfg: dict):
     self.pose = PosePipeline(cfg.get("fall", {}))
     self.fall_cfg = cfg.get("fall", {})
-    self.emotion = EmotionRecognizer(cfg.get("emotion", {}))
+    self.emotion = EmotionRecognizer()
 
   def analyze_file(
     self,
@@ -145,7 +149,149 @@ class VideoAnalyzer:
       "emotion": {
         "dominant": dominant_emotion,
         "scores": {k: round(v, 3) for k, v in avg_emo.items()},
-        "timeline": emotion_timeline[-40:],
+        "timeline": emotion_timeline,
         "fused_label": self.emotion.fuse(dominant_emotion, None).label,
       },
+    }
+
+  def render_annotated_video(
+    self,
+    path: Path,
+    out_path: Path,
+    *,
+    max_frames: int | None = None,
+    frame_stride: int = 1,
+    target_width: int = 1280,
+  ) -> dict:
+    """逐帧绘制骨架与跌倒 HUD，输出 H.264 mp4（供答辩录屏/合成总片）。"""
+    path = Path(path)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    cap = cv2.VideoCapture(str(path))
+    if not cap.isOpened():
+      return {"ok": False, "error": "无法打开视频文件"}
+
+    native_fps = cap.get(cv2.CAP_PROP_FPS) or 15.0
+    if native_fps <= 0:
+      native_fps = 15.0
+    dt = (frame_stride / native_fps) if native_fps > 0 else 0.1
+
+    self.pose.reset()
+    tmp_path = out_path.with_suffix(".raw.mp4")
+    writer = None
+    out_w = out_h = 0
+    frame_i = 0
+    read_i = 0
+    first_fall_t: float | None = None
+    any_fall = False
+    max_fall_score = 0.0
+
+    while max_frames is None or frame_i < max_frames:
+      ok, frame = cap.read()
+      if not ok:
+        break
+      if read_i % frame_stride != 0:
+        read_i += 1
+        continue
+      read_i += 1
+
+      metrics, fall_r, annotated = self.pose.analyze_bgr(frame, dt=dt)
+      vis = annotated if annotated is not None else frame.copy()
+      t_s = round(frame_i * dt, 2)
+
+      if fall_r.score > max_fall_score:
+        max_fall_score = fall_r.score
+      if fall_r.detected:
+        any_fall = True
+        if first_fall_t is None:
+          first_fall_t = t_s
+        cv2.rectangle(vis, (0, 0), (vis.shape[1], 56), (0, 0, 200), -1)
+        cv2.putText(
+          vis,
+          f"FALL ALERT  score={fall_r.score:.2f}  t={t_s:.1f}s",
+          (16, 38),
+          cv2.FONT_HERSHEY_SIMPLEX,
+          0.85,
+          (255, 255, 255),
+          2,
+          cv2.LINE_AA,
+        )
+      else:
+        cv2.rectangle(vis, (0, 0), (vis.shape[1], 40), (32, 32, 32), -1)
+        cv2.putText(
+          vis,
+          "CareCompanion · pose / fall",
+          (16, 28),
+          cv2.FONT_HERSHEY_SIMPLEX,
+          0.7,
+          (220, 220, 220),
+          2,
+          cv2.LINE_AA,
+        )
+
+      hud = (
+        f"aspect={metrics.aspect_ratio:.2f} dy={metrics.dy:.2f}"
+        if metrics.visible
+        else "no pose"
+      )
+      cv2.putText(
+        vis,
+        hud,
+        (16, vis.shape[0] - 16),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (180, 255, 180),
+        1,
+        cv2.LINE_AA,
+      )
+
+      h, w = vis.shape[:2]
+      if w > target_width:
+        scale = target_width / w
+        vis = cv2.resize(vis, (target_width, int(h * scale)), interpolation=cv2.INTER_AREA)
+      if writer is None:
+        out_h, out_w = vis.shape[:2]
+        writer = cv2.VideoWriter(
+          str(tmp_path),
+          cv2.VideoWriter_fourcc(*"mp4v"),
+          native_fps / frame_stride,
+          (out_w, out_h),
+        )
+      writer.write(vis)
+      frame_i += 1
+
+    cap.release()
+    if writer is not None:
+      writer.release()
+
+    if frame_i == 0:
+      tmp_path.unlink(missing_ok=True)
+      return {"ok": False, "error": "视频无有效帧"}
+
+    try:
+      subprocess.run(
+        [
+          "ffmpeg", "-y", "-nostdin", "-i", str(tmp_path),
+          "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+          "-c:v", "libx264", "-pix_fmt", "yuv420p", "-an",
+          str(out_path),
+        ],
+        check=True,
+        capture_output=True,
+      )
+      tmp_path.unlink(missing_ok=True)
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+      logger.warning("ffmpeg 转码失败，保留 mp4v: %s", exc)
+      if tmp_path.is_file():
+        tmp_path.replace(out_path)
+
+    return {
+      "ok": True,
+      "frames_rendered": frame_i,
+      "duration_s": round(frame_i * dt, 2),
+      "fall_detected": any_fall,
+      "max_fall_score": round(max_fall_score, 3),
+      "first_alert_t_s": first_fall_t,
+      "output": str(out_path),
     }

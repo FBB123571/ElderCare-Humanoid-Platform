@@ -270,25 +270,60 @@
         </div>
         <div class="video-tabs">
           <button type="button" class="video-tab active" data-vtab="fall">跌倒检测</button>
-          <button type="button" class="video-tab" data-vtab="mood">心情分析</button>
+          <button type="button" class="video-tab" data-vtab="mood">心情 · 数字人剧场</button>
         </div>
         <div class="field">
           <label for="videoUrl">视频 URL（mp4 直链）</label>
           <input type="url" id="videoUrl" placeholder="https://.../xxx.mp4" />
         </div>
         <div class="video-samples" id="videoSamples"></div>
-        <div class="vision-actions">
+        <div class="vision-actions video-fall-actions">
           <label class="btn ghost sm vision-upload-btn">
             上传视频文件
             <input type="file" id="videoFile" accept="video/mp4,video/webm,video/*" hidden />
           </label>
           <button type="button" id="btnVideoFall" class="btn primary sm">分析并跌倒预警</button>
-          <button type="button" id="btnVideoMood" class="btn accent sm">分析心情轨迹</button>
+        </div>
+        <div class="vision-actions video-mood-actions hidden">
+          <button type="button" id="btnVideoMood" class="btn accent sm">分析心情并开演</button>
+          <button type="button" id="btnMoodAct" class="btn ghost sm">重播心情剧</button>
         </div>
         <p id="videoStatus" class="vision-status">支持公开样片或自采 mp4；分析后自动触发紧急决策（跌倒模式）</p>
-        <div id="videoAlert" class="video-alert hidden"></div>
-        <img id="videoPreview" class="cam-preview hidden" alt="关键帧" />
-        <div id="videoEmotionChart" class="emotion-chart hidden"></div>
+        <div id="videoFallBlock">
+          <div id="videoAlert" class="video-alert hidden"></div>
+          <img id="videoPreview" class="cam-preview hidden" alt="关键帧" />
+        </div>
+        <div id="videoMoodBlock" class="hidden">
+          <div id="videoEmotionChart" class="emotion-chart hidden"></div>
+          <div id="videoMoodTheater" class="mood-theater">
+            <p class="mood-theater-hint">小护「小护」根据视频情绪轨迹，与老人像演戏一样自然对话</p>
+            <div class="dual-dh-stage mood-dh-stage">
+              <figure class="dh-figure elder-fig" id="moodElderFig" data-mood="neutral" aria-label="老人数字人">
+                <div class="fig-body">
+                  <div class="fig-head"></div>
+                  <div class="fig-torso"></div>
+                  <div class="fig-arms"></div>
+                  <div class="fig-legs"><i></i><i></i></div>
+                </div>
+                <figcaption class="fig-name">老人</figcaption>
+                <span class="fig-mood-tag" id="moodElderMood">平静</span>
+              </figure>
+              <div id="moodDhScript" class="dh-script mood-dh-script dual-script">
+                <div class="chat-empty">上传视频并点击「分析心情并开演」</div>
+              </div>
+              <figure class="dh-figure comp-fig" id="moodCompFig" data-mood="neutral" aria-label="小护数字人">
+                <div class="fig-body">
+                  <div class="fig-head"><span class="fig-cap"></span></div>
+                  <div class="fig-torso"></div>
+                  <div class="fig-arms"></div>
+                  <div class="fig-legs"><i></i><i></i></div>
+                </div>
+                <figcaption class="fig-name">小护</figcaption>
+                <span class="fig-mood-tag" id="moodCompMood">平静</span>
+              </figure>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="panel dh-panel">
@@ -299,19 +334,30 @@
             <p>小护 · 与老人自然对话 · 情景剧演绎</p>
           </div>
         </div>
-        <div class="dh-stage">
-          <div id="dhAvatar" class="dh-avatar" data-mood="neutral">
-            <div class="dh-face">
-              <span class="dh-eye left"></span>
-              <span class="dh-eye right"></span>
-              <span class="dh-mouth"></span>
+        <div class="dual-dh-stage">
+          <figure class="dh-figure elder-fig" id="dhElderFig" data-mood="neutral">
+            <div class="fig-body">
+              <div class="fig-head"></div>
+              <div class="fig-torso"></div>
+              <div class="fig-arms"></div>
+              <div class="fig-legs"><i></i><i></i></div>
             </div>
-            <div class="dh-name">小护</div>
-            <div id="dhMoodTag" class="dh-mood-tag">平静</div>
-          </div>
-          <div id="dhScript" class="dh-script">
+            <figcaption class="fig-name">老人</figcaption>
+            <span class="fig-mood-tag" id="dhElderMood">平静</span>
+          </figure>
+          <div id="dhScript" class="dh-script dual-script">
             <div class="chat-empty">点击「开始情景剧」或输入话语与数字人交流</div>
           </div>
+          <figure class="dh-figure comp-fig" id="dhCompFig" data-mood="neutral">
+            <div class="fig-body">
+              <div class="fig-head"><span class="fig-cap"></span></div>
+              <div class="fig-torso"></div>
+              <div class="fig-arms"></div>
+              <div class="fig-legs"><i></i><i></i></div>
+            </div>
+            <figcaption class="fig-name">小护</figcaption>
+            <span class="fig-mood-tag" id="dhCompMood">平静</span>
+          </figure>
         </div>
         <div class="field">
           <label for="dhInput">对老人说 / 老人说</label>

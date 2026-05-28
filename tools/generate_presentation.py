@@ -721,7 +721,9 @@ def _slide_open_source(prs):
     ("GitHub", GITHUB_URL),
     ("团队", f"{TEAM_NAME}（{SCHOOL}）"),
     ("本地演示", "bash scripts/run_web.sh"),
-    ("情景剧总片", "docs/assets/demo_full_scenario.mp4"),
+    ("完整流程总片（约47s）", "docs/assets/demo_full_scenario.mp4"),
+    ("心情数字人", "docs/assets/demo_mood_digital_human.mp4"),
+    ("跌倒分析", "docs/assets/demo_elder_fall_analysis.mp4"),
     ("Web 演示", "docs/assets/demo_carecompanion.mp4"),
     ("G1 仿真", "docs/assets/demo_isaac_g1_locomotion.mp4"),
     ("软著", "申请中"),
@@ -1179,42 +1181,80 @@ def main():
 
   _slide_video_embed(
     prs,
-    "情景剧总片（Web → ROS2 → G1）",
+    "完整流程总片（答辩主片）",
     "demo_full_scenario.mp4",
     [
-      "约 30 秒：跌倒紧急 → 指令下发 → 人形行走",
-      "决策层 / 通信层 / 执行层分层展示",
-      "生成：bash scripts/run_full_scenario_demo.sh",
-      "右栏可全屏播放",
+      "约 47 秒四段串联，答辩现场主片",
+      "① 双数字人情景演绎  ② 跌倒视觉分析",
+      "③ ROS2 决策下发  ④ G1 搀扶站起（全仿真）",
     ],
-    poster_file="ppt_header_perception.png",
+    poster_file="preview_dual_dh.png",
     caption="demo_full_scenario.mp4",
+  )
+  _slide_video_embed(
+    prs,
+    "① 双数字人情景演绎",
+    "demo_mood_digital_human.mp4",
+    [
+      "根据视频心情轨迹自动生成对白",
+      "老人与小护全身数字人互动演戏",
+      "含跌倒转折与紧急安抚话术",
+      "生成：scripts/render_mood_theater_video.py",
+    ],
+    poster_file="preview_dual_dh.png",
+    caption="demo_mood_digital_human.mp4",
+  )
+  _slide_video_embed(
+    prs,
+    "② 跌倒视觉分析",
+    "demo_elder_fall_analysis.mp4",
+    [
+      "自采老人跌倒微信样片",
+      "MediaPipe 骨架 + FALL ALERT 叠加",
+      "约 3s 触发预警，置信 0.80",
+      "生成：scripts/run_elder_fall_demo.sh",
+    ],
+    poster_file="ppt_mediapipe_pose.png",
+    caption="demo_elder_fall_analysis.mp4",
+  )
+  _slide_video_embed(
+    prs,
+    "③ ROS2 决策下发",
+    "demo_ros2_cmd_echo.mp4",
+    [
+      "ros2 topic echo /care/robot_cmd 风格",
+      "含 call_emergency 等紧急指令",
+      "与情景剧剧本 JSONL 时间轴一致",
+      "生成：scripts/render_ros2_echo_video.py",
+    ],
+    poster_file="ppt_robot_commands.png",
+    caption="demo_ros2_cmd_echo.mp4",
+  )
+  _slide_video_embed(
+    prs,
+    "④ G1 搀扶老人站起（全仿真）",
+    "demo_isaac_g1_locomotion.mp4",
+    [
+      "Isaac Simple Room 家庭场景 + 双角色同机位",
+      "跌倒 → G1 赶赴 → 跪地托肩 → 协同站起",
+      "固定机位录屏，与决策链路一致",
+      "生成：scripts/record_isaac_dual_rescue.sh",
+    ],
+    poster_file="preview_dual_dh.png",
+    caption="demo_isaac_g1_locomotion.mp4",
   )
   _slide_video_embed(
     prs,
     "Web 全流程演示录像",
     "demo_carecompanion.mp4",
     [
-      "监测 → 老人倾诉 → 模拟跌倒 → 紧急流程",
-      "仓库内可离线播放，不依赖外网",
+      "监测 → 倾诉 → 模拟跌倒 → 视频分析",
+      "含心情数字人剧场与指令流",
+      "仓库内可离线播放",
       "与现场 run_web.sh 操作一致",
-      "右栏可全屏播放",
     ],
     poster_file="ppt_full_dashboard.png",
     caption="demo_carecompanion.mp4",
-  )
-  _slide_video_embed(
-    prs,
-    "人形仿真行走（Isaac Lab · Unitree G1）",
-    "demo_isaac_g1_locomotion.mp4",
-    [
-      "Isaac Lab 平地速度跟踪预训练策略",
-      "固定前进 0.8 m/s，世界坐标侧拍全身",
-      "录屏段位移约 6 m，关节持续摆动",
-      "说明仿真层已对接，可扩展 ROS2 真机",
-    ],
-    poster_file="ppt_isaac_g1_poster.png",
-    caption="demo_isaac_g1_locomotion.mp4",
   )
 
   _slide_lr(prs, "测试结果", [

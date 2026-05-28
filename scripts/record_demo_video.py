@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = ROOT / "docs" / "assets" / "demo_carecompanion.mp4"
 FPS = 24
-VIEW_W, VIEW_H = 1920, 1080
+VIEW_W, VIEW_H = 1280, 720
 
 
 def _ensure_web(port: int) -> None:
@@ -217,7 +217,42 @@ def record(port: int, out: Path, upload_image: Path | None) -> Path:
     page.locator("#chatLog").scroll_into_view_if_needed()
     cap.hold(4.0)
     page.locator(".risk-hero").scroll_into_view_if_needed()
-    cap.hold(4.0)
+    cap.hold(3.0)
+
+    # ⑤ 网络视频 · 跌倒分析（自采样片）
+    elder = ROOT / "docs" / "assets" / "samples" / "elder_fall_wechat.mp4"
+    if elder.is_file():
+      page.locator(".feature-row").scroll_into_view_if_needed()
+      cap.hold(1.0)
+      page.locator('.video-tab[data-vtab="fall"]').click()
+      cap.hold(0.8)
+      page.locator("#videoFile").set_input_files(str(elder.resolve()))
+      cap.hold(0.6)
+      page.locator("#btnVideoFall").click()
+      cap.until(
+        """() => {
+          const a = document.getElementById('videoAlert');
+          return a && !a.classList.contains('hidden');
+        }""",
+        timeout_s=120,
+        poll_s=0.35,
+        min_hold_s=5.0,
+      )
+
+    # ⑥ 心情 · 数字人剧场（缩略展示）
+    if elder.is_file():
+      page.locator('.video-tab[data-vtab="mood"]').click()
+      cap.hold(1.0)
+      page.locator("#videoFile").set_input_files(str(elder.resolve()))
+      page.locator("#btnVideoMood").click()
+      cap.until(
+        """() => (document.querySelectorAll('#moodDhScript .dh-line').length >= 4)""",
+        timeout_s=150,
+        poll_s=0.35,
+        min_hold_s=8.0,
+      )
+      page.locator("#videoMoodTheater").scroll_into_view_if_needed()
+      cap.hold(4.0)
 
     browser.close()
 

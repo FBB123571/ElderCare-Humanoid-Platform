@@ -12,8 +12,10 @@ import yaml
 from care_companion.action.robot_adapter import SimulationAdapter
 from care_companion.cognition.digital_human import (
   ACTING_SCRIPT,
+  ActingLine,
   COMPANION_GREETING,
   COMPANION_NAME,
+  build_mood_script_from_analysis,
   companion_avatar_state,
 )
 from care_companion.core.config import load_config
@@ -132,7 +134,19 @@ class CareSession:
     if not path.is_file():
       return {"fall": [], "mood": []}
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    return {"fall": data.get("fall", []), "mood": data.get("mood", [])}
+
+    def _enrich(items: list) -> list:
+      out = []
+      for raw in items or []:
+        s = dict(raw)
+        loc = s.get("local")
+        if loc:
+          p = (ROOT / loc).resolve()
+          s["ready"] = p.is_file()
+        out.append(s)
+      return out
+
+    return {"fall": _enrich(data.get("fall", [])), "mood": _enrich(data.get("mood", []))}
 
   def analyze_video(
     self,
@@ -213,16 +227,17 @@ class CareSession:
       "companion_name": COMPANION_NAME,
     }
 
-  async def stream_acting(self):
-    yield {
-      "type": "stage",
-      "text": COMPANION_GREETING,
-      "speaker": COMPANION_NAME,
-      "avatar": "neutral",
-    }
-    self.dh_log.append({"role": "companion", "text": COMPANION_GREETING, "speaker": COMPANION_NAME})
+  async def _stream_script_lines(self, script: list[ActingLine], *, greet: bool = True):
+    if greet:
+      yield {
+        "type": "stage",
+        "text": COMPANION_GREETING,
+        "speaker": COMPANION_NAME,
+        "avatar": "neutral",
+      }
+      self.dh_log.append({"role": "companion", "text": COMPANION_GREETING, "speaker": COMPANION_NAME})
 
-    for line in ACTING_SCRIPT:
+    for line in script:
       if line.pause_s > 0:
         yield {"type": "pause", "seconds": line.pause_s}
         await asyncio.sleep(line.pause_s)
@@ -274,6 +289,7 @@ class CareSession:
         self.dh_avatar = companion_avatar_state(result["risk"]["level"], f.emotion)
         if line.text:
           yield {"type": "elder", "text": line.text, "speaker": "老人"}
+          self.dh_log.append({"role": "elder", "text": line.text, "speaker": "老人"})
         yield {
           "type": "companion",
           "text": result.get("reply") or "",
@@ -287,9 +303,22 @@ class CareSession:
             "text": result["reply"],
             "speaker": COMPANION_NAME,
           })
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.65)
 
     yield {"type": "done", "avatar": self.dh_avatar}
+
+  async def stream_acting(self):
+    async for item in self._stream_script_lines(ACTING_SCRIPT, greet=True):
+      yield item
+
+  async def stream_mood_acting(self):
+    if not self.last_video or not self.last_video.get("ok"):
+      yield {"type": "error", "text": "请先完成「心情分析」视频分析"}
+      yield {"type": "done", "avatar": self.dh_avatar}
+      return
+    script = build_mood_script_from_analysis(self.last_video)
+    async for item in self._stream_script_lines(script, greet=True):
+      yield item
 
   async def stream_demo(self):
     for step in demo_scenarios():

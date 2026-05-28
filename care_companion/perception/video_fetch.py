@@ -61,6 +61,18 @@ def resolve_video_source(url: str | None = None, upload_bytes: bytes | None = No
   if not url or not url.strip():
     raise ValueError("请提供视频 URL 或上传文件")
   url = url.strip()
+  if url.startswith("file://"):
+    local = Path(url[7:]).expanduser()
+    if local.is_file():
+      return local.resolve(), "local"
+    raise ValueError(f"本地文件不存在: {local}")
+  root = Path(__file__).resolve().parents[2]
+  if not url.startswith(("http://", "https://")):
+    local = Path(url).expanduser()
+    if not local.is_absolute():
+      local = (root / local).resolve()
+    if local.is_file():
+      return local, "local"
   tmp = Path(tempfile.mkstemp(suffix=".mp4")[1])
   try:
     fetch_video_to_path(url, tmp)

@@ -115,6 +115,8 @@ ElderCare-Humanoid-Platform/
 ## 文档
 
 - [技术报告（竞赛版）](docs/TECHNICAL_REPORT.md)
+- [项目任务书](docs/项目任务书.md)
+- [答辩主片](docs/assets/demo_full_scenario.mp4)（约 47s 四段串联）
 - [答辩 PPT](docs/答辩_CareCompanion.pptx)（运行 `tools/generate_presentation.py` 生成）
 - [架构说明](docs/ARCHITECTURE.md)
 - [部署指南](docs/DEPLOYMENT.md)
