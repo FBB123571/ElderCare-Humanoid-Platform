@@ -353,32 +353,33 @@ def fig_fall_decision_tree() -> Path:
 # ── 7b. 项目目标：架构 + 状态机（调度条置顶，标题/副标题分列） ───
 def fig_project_goals_combo() -> Path:
   fig = _fig()
-  ax1 = fig.add_axes([0.03, 0.48, 0.94, 0.46])
-  ax2 = fig.add_axes([0.03, 0.04, 0.94, 0.42])
+  # 上半：架构图占约 62%；下半：状态机约 30%
+  ax1 = fig.add_axes([0.03, 0.33, 0.94, 0.62])
+  ax2 = fig.add_axes([0.03, 0.04, 0.94, 0.27])
   ax1.set_xlim(0, 10)
   ax1.set_ylim(0, 10)
   ax1.axis("off")
-  ax1.text(0.2, 9.55, "系统四层架构", fontsize=11, fontweight="bold", color=C0, ha="left")
-  ax1.add_patch(FancyBboxPatch((0.35, 8.50), 9.3, 0.62, boxstyle="round,pad=0.03", fc=C0, ec=C0))
-  ax1.text(5.0, 8.81, "CareOrchestrator · 模块调度中枢", ha="center", va="center",
-           fontsize=10, color="white", fontweight="bold")
+  ax1.text(0.2, 9.55, "系统四层架构", fontsize=12, fontweight="bold", color=C0, ha="left")
+  ax1.add_patch(FancyBboxPatch((0.35, 8.48), 9.3, 0.68, boxstyle="round,pad=0.03", fc=C0, ec=C0))
+  ax1.text(5.0, 8.82, "CareOrchestrator · 模块调度中枢", ha="center", va="center",
+           fontsize=11, color="white", fontweight="bold")
   layers = [
     ("L4 交互层", "Web / GUI", C3),
     ("L3 认知层", "风险 · 对话 · 规划", C2),
     ("L2 感知层", "跌倒 · 情绪 · 视觉", C1),
     ("L1 执行层", "机器人 / ROS2", C0),
   ]
-  bh, gap = 0.68, 0.10
-  y_top = 8.35
+  bh, gap = 0.78, 0.11
+  y_top = 8.32
   for i, (t, sub, col) in enumerate(layers):
     y = y_top - (i + 1) * bh - i * gap
-    ax1.add_patch(FancyBboxPatch((0.35, y), 9.3, bh, boxstyle="round,pad=0.02", fc="#f7fafc", ec=col, lw=1.8))
-    ax1.add_patch(Rectangle((0.35, y), 0.18, bh, fc=col))
+    ax1.add_patch(FancyBboxPatch((0.35, y), 9.3, bh, boxstyle="round,pad=0.02", fc="#f7fafc", ec=col, lw=2))
+    ax1.add_patch(Rectangle((0.35, y), 0.20, bh, fc=col))
     yc = y + bh / 2
-    ax1.text(0.68, yc, t, fontsize=9.5, fontweight="bold", color=C0, va="center", ha="left")
-    ax1.text(2.85, yc, sub, fontsize=9, color=C_GRAY, va="center", ha="left")
+    ax1.text(0.72, yc, t, fontsize=10.5, fontweight="bold", color=C0, va="center", ha="left")
+    ax1.text(2.95, yc, sub, fontsize=10, color=C_GRAY, va="center", ha="left")
 
-  ax2.text(0.15, 5.55, "状态机切换", fontsize=12, fontweight="bold", color=C0, ha="left")
+  ax2.text(0.15, 5.55, "状态机切换", fontsize=11, fontweight="bold", color=C0, ha="left")
   _draw_state_machine(ax2, compact=True)
   return _save(fig, "project_goals_combo.png", trim=False)
 
