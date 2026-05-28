@@ -9,6 +9,8 @@ uvicorn[standard]>=0.27
 python-multipart>=0.0.9
 mediapipe>=0.10.9
 python-pptx>=0.6.23
+markdown>=3.5
+weasyprint>=62.0
 pytest>=7.0
 
 # 自动生成演示视频（可选）
