@@ -438,7 +438,7 @@ def _slide_lr_dual_fig(
     path = SCI / fig_name
     if path.exists():
       _place_figure(
-        slide, path, left=FIG_LEFT, top=y, max_w=FIG_WIDTH, max_h=h + FIG_CAP_H * 0.45,
+        slide, path, left=FIG_LEFT, top=y, max_w=FIG_WIDTH, max_h=h,
         caption=cap, fill_ratio=0.93, framed=False,
       )
   return slide
@@ -532,6 +532,61 @@ def _slide_draw(prs, title: str, bullets: list[str], draw_fn, *, takeaway: str =
   slide = _content_slide(prs, title, footer_hint)
   _bullets_panel(slide, bullets, takeaway=takeaway, size=bullet_size)
   draw_fn(slide, COL_R + 0.05, CONTENT_TOP + 0.04, COL_R_W - 0.1, CONTENT_H - 0.08)
+  return slide
+
+
+def _slide_skeleton_annotated(prs):
+  """骨架页：左图 + 右侧文字注释（不重复贴风险面板图）。"""
+  slide = _content_slide(prs, "骨架分析（上传照片）", "系统实拍")
+  _bullets_panel(slide, [
+    "MediaPipe 提取 33 个骨架关键点",
+    "由肩-髋-踝计算宽高比 R",
+    "竖直速度突增触发跌倒规则",
+    "上传照片与摄像头共用同一逻辑",
+  ], size=12)
+  _draw_figure_panel(slide, left=COL_R + 0.04, top=FIG_TOP - 0.02, width=COL_R_W - 0.08, height=FIG_TOTAL_H)
+  sep = slide.shapes.add_shape(1, Inches(COL_L + COL_L_W + GUTTER * 0.45), Inches(CONTENT_TOP),
+                               Inches(0.012), Inches(CONTENT_H))
+  sep.fill.solid()
+  sep.fill.fore_color.rgb = BORDER
+  sep.line.fill.background()
+
+  pose = ASSETS / "ppt_mediapipe_pose.png"
+  img_left = FIG_LEFT + 0.06
+  img_w = 2.75
+  img_top = FIG_TOP + 0.08
+  img_h = FIG_BODY_H - 0.10
+  if pose.exists():
+    _place_figure(
+      slide, pose, left=img_left, top=img_top, max_w=img_w, max_h=img_h,
+      caption="MediaPipe 骨架叠加", fill_ratio=0.97, framed=False,
+    )
+
+  ann_left = img_left + img_w + 0.16
+  ann_w = FIG_LEFT + FIG_WIDTH - ann_left - 0.06
+  notes = [
+    ("① 关键点", "鼻、肩、髋、踝等构成人体构型"),
+    ("② 宽高比 R", "躯干投影宽高比异常 → 姿态变化"),
+    ("③ 竖直速度 vy", "关键点整体下移超阈 → 判定跌倒"),
+  ]
+  y = img_top + 0.12
+  for title, desc in notes:
+    card = slide.shapes.add_shape(1, Inches(ann_left), Inches(y), Inches(ann_w), Inches(0.88))
+    card.fill.solid()
+    card.fill.fore_color.rgb = LIGHT_BLUE
+    card.line.color.rgb = BORDER
+    card.line.width = Pt(0.6)
+    tb = slide.shapes.add_textbox(Inches(ann_left + 0.14), Inches(y + 0.10), Inches(ann_w - 0.24), Inches(0.70))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    p0 = tf.paragraphs[0]
+    p0.text = title
+    _set_para_font(p0, 12, bold=True, color=ACCENT)
+    p1 = tf.add_paragraph()
+    p1.text = desc
+    _set_para_font(p1, 11, color=DARK)
+    p1.space_before = Pt(3)
+    y += 0.98
   return slide
 
 
@@ -855,18 +910,18 @@ def _slide_qr_dual(prs):
     demo = ASSETS / "ppt_full_dashboard.png"
   qr_w = 1.72
   gap = 0.14
-  img_top = FIG_TOP + 0.05
-  img_h = FIG_TOTAL_H - FIG_CAP_H - 0.08
+  img_top = FIG_TOP + 0.06
+  fig_body = FIG_BODY_H - 0.18
   if qr.exists():
     _place_figure(
-      slide, qr, left=FIG_LEFT, top=img_top + 0.25,
-      max_w=qr_w, max_h=qr_w, caption="仓库二维码", fill_ratio=0.90, framed=False,
+      slide, qr, left=FIG_LEFT, top=img_top + 0.22,
+      max_w=qr_w, max_h=qr_w + 0.15, caption="仓库二维码", fill_ratio=0.90, framed=False,
     )
   if demo.exists():
     _place_figure(
       slide, demo, left=FIG_LEFT + qr_w + gap, top=img_top,
-      max_w=FIG_WIDTH - qr_w - gap, max_h=img_h,
-      caption="Web 感知界面", fill_ratio=0.90, framed=False,
+      max_w=FIG_WIDTH - qr_w - gap, max_h=fig_body,
+      caption="Web 感知界面", fill_ratio=0.88, framed=False,
     )
 
 
@@ -932,14 +987,13 @@ def main():
     "仓库里带 Web 和脚本，老师可以现场点着看",
   ], "compare_table.png", sci=True, figure_kind="chart", caption="方案对比表")
 
-  _slide_lr_dual_fig(prs, "项目要做什么", [
+  _slide_lr(prs, "项目要做什么", [
     "CareCompanion：养老场景的人形陪伴软件",
     "核心是 CareOrchestrator，负责模块调度",
     "跌倒要能检、要能触发紧急流程",
     "对话和机器人动作要能联动",
-  ], "architecture_layers.png", "state_machine.png",
-     cap_top="四层架构", cap_bottom="状态机概览",
-     takeaway="目标在系统里都能点到")
+  ], "project_goals_combo.png", sci=True, bullet_size=13,
+     caption="架构与状态机总览", takeaway="目标在系统里都能点到")
 
   _part_divider(prs, "第二部分", "模型 · 架构 · 算法",
                 ["四层架构", "状态机", "融合与检测"], sci_thumb="risk_fusion.png")
@@ -1004,8 +1058,7 @@ def main():
     "内置剧本：日常—倾诉—跌倒",
   ], "ppt_full_dashboard.png", diagram=False, caption="主界面")
 
-  _screenshot_duo(prs, "骨架分析（上传照片）", "ppt_mediapipe_pose.png", "ppt_risk_panel.png",
-                  "MediaPipe 骨架叠加", "风险面板联动")
+  _slide_skeleton_annotated(prs)
   _screenshot_duo(prs, "风险与情绪输入", "ppt_risk_panel.png", "ppt_emotion_input.png", "风险面板", "情绪输入")
   _screenshot_duo(prs, "紧急过程记录", "ppt_chat_emergency.png", "ppt_robot_commands.png", "对话日志", "机器人指令")
   _screenshot_slide(prs, "紧急时感知页", "ppt_header_perception.png", "状态切到紧急后的感知区")
