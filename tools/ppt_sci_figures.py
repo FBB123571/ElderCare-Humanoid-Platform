@@ -303,82 +303,82 @@ def fig_risk_fusion() -> Path:
   return _save(fig, "risk_fusion.png")
 
 
-# ── 7. 跌倒：竖向流程图（大字号、清晰分支） ─────────────────────
+# ── 7. 跌倒：矩形判定流程（避免菱形文字叠字） ───────────────────
 def fig_fall_decision_tree() -> Path:
   fig = _fig()
-  ax = fig.add_axes([0.06, 0.05, 0.88, 0.90])
+  ax = fig.add_axes([0.05, 0.06, 0.90, 0.88])
   ax.set_xlim(0, 10)
   ax.set_ylim(0, 10)
   ax.axis("off")
-  cx = 5.0
+  cx, rx = 4.2, 8.15
 
-  def box(cy, text, fc, h=0.75, w=3.2):
-    ax.add_patch(FancyBboxPatch((cx - w / 2, cy - h / 2), w, h, boxstyle="round,pad=0.04", fc=fc, ec="white", lw=1.5))
-    ax.text(cx, cy, text, ha="center", va="center", fontsize=12, color="white", fontweight="bold")
+  def rect_box(x, y, w, h, text, *, fc, ec="white", tc="white", fs=11):
+    ax.add_patch(FancyBboxPatch((x - w / 2, y - h / 2), w, h, boxstyle="round,pad=0.05", fc=fc, ec=ec, lw=1.6))
+    ax.text(x, y, text, ha="center", va="center", fontsize=fs, color=tc, fontweight="bold", linespacing=1.35)
 
-  def diamond(cy, lines):
-    w, h = 1.35, 1.05
-    pts = [(cx, cy + h), (cx + w, cy), (cx, cy - h), (cx - w, cy)]
-    ax.add_patch(Polygon(pts, closed=True, fc="#ebf8ff", ec=C2, lw=2))
-    _multiline(ax, cx, cy, lines, fontsize=11, color=C0, fontweight="bold")
+  def judge_box(y, line1, line2):
+    rect_box(cx, y, 3.6, 1.15, f"{line1}\n{line2}", fc="#ebf8ff", ec=C2, tc=C0, fs=10)
 
-  box(8.8, "骨架输入\n(MediaPipe)", C2, h=0.9)
-  diamond(6.8, ["宽高比 R", "是否异常?"])
-  diamond(4.2, ["竖直速度", "是否骤降?"])
-  box(1.5, "触发紧急流程", C_RED, h=0.85, w=3.4)
+  rect_box(cx, 9.0, 3.4, 0.85, "骨架输入 (MediaPipe)", fc=C2)
+  judge_box(7.0, "宽高比 R", "是否异常?")
+  judge_box(4.6, "竖直速度 vy", "是否骤降?")
+  rect_box(cx, 2.0, 3.6, 0.85, "触发紧急流程", fc=C_RED)
+  rect_box(rx, 7.0, 1.35, 0.65, "正常", fc="#e6fffa", ec=C_GREEN, tc=C_GREEN, fs=11)
+  rect_box(rx, 4.6, 1.35, 0.65, "正常", fc="#e6fffa", ec=C_GREEN, tc=C_GREEN, fs=11)
 
-  for y1, y2 in [(8.8, 7.55), (6.8, 5.55), (4.2, 2.35)]:
-    ax.annotate("", xy=(cx, y2 + 0.55), xytext=(cx, y1 - 0.5),
+  for y1, y2 in [(9.0, 7.65), (7.0, 5.25), (4.6, 2.85)]:
+    ax.annotate("", xy=(cx, y2 + 0.58), xytext=(cx, y1 - 0.48),
                 arrowprops=dict(arrowstyle="-|>", color=C_GRAY, lw=2))
-  ax.annotate("", xy=(cx + 0.55, 6.8), xytext=(8.2, 6.8),
-              arrowprops=dict(arrowstyle="-|>", color=C2, lw=1.8))
-  ax.annotate("", xy=(cx + 0.55, 4.2), xytext=(8.2, 4.2),
-              arrowprops=dict(arrowstyle="-|>", color=C2, lw=1.8))
-  ax.text(8.55, 6.8, "否", fontsize=11, color=C2, fontweight="bold", va="center")
-  ax.text(8.55, 4.2, "否", fontsize=11, color=C2, fontweight="bold", va="center")
-  ax.text(8.55, 5.5, "正常", fontsize=11, color=C_GREEN, fontweight="bold", va="center")
-  ax.annotate("是", xy=(cx, 2.35), xytext=(cx + 1.55, 4.2), fontsize=11, color=C_RED, fontweight="bold",
+  for y in (7.0, 4.6):
+    ax.plot([cx + 1.8, rx - 0.68], [y, y], color=C2, lw=1.8)
+    ax.annotate("", xy=(rx - 0.68, y), xytext=(cx + 1.8, y),
+                arrowprops=dict(arrowstyle="-|>", color=C2, lw=1.8))
+    ax.text(cx + 2.35, y + 0.22, "否", fontsize=10, color=C2, fontweight="bold")
+  ax.text(cx + 0.55, 3.55, "是", fontsize=10, color=C_RED, fontweight="bold")
+  ax.annotate("", xy=(cx, 2.85), xytext=(cx + 1.1, 4.6),
               arrowprops=dict(arrowstyle="-|>", color=C_RED, lw=1.8))
   return _save(fig, "fall_decision_tree.png")
 
 
-# ── 7b. 项目目标：架构+状态机 合成大图（大字号） ─────────────────
+# ── 7b. 项目目标：架构 + 状态机（调度条置顶，无叠字） ─────────────
 def fig_project_goals_combo() -> Path:
   fig = _fig()
-  ax1 = fig.add_axes([0.05, 0.50, 0.90, 0.44])
-  ax2 = fig.add_axes([0.05, 0.04, 0.90, 0.44])
+  ax1 = fig.add_axes([0.04, 0.51, 0.92, 0.43])
+  ax2 = fig.add_axes([0.04, 0.05, 0.92, 0.42])
   for ax, title in [(ax1, "系统四层架构"), (ax2, "状态机切换")]:
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 6)
     ax.axis("off")
-    ax.text(0.02, 5.65, title, fontsize=13, fontweight="bold", color=C0, ha="left")
+    ax.text(0.15, 5.55, title, fontsize=12, fontweight="bold", color=C0, ha="left")
 
   ax = ax1
+  ax.add_patch(FancyBboxPatch((0.35, 4.72), 9.3, 0.62, boxstyle="round,pad=0.03", fc=C0, ec=C0))
+  ax.text(5.0, 5.03, "CareOrchestrator · 模块调度中枢", ha="center", va="center",
+          fontsize=11, color="white", fontweight="bold")
   layers = [
-    ("L4 交互层", "Web / GUI", C3, 4.55),
-    ("L3 认知层", "风险 · 对话 · 规划", C2, 3.35),
-    ("L2 感知层", "跌倒 · 情绪 · 视觉", C1, 2.15),
-    ("L1 执行层", "机器人 / ROS2", C0, 0.95),
+    ("L4 交互层", "Web / GUI", C3, 3.88),
+    ("L3 认知层", "风险 · 对话 · 规划", C2, 2.98),
+    ("L2 感知层", "跌倒 · 情绪 · 视觉", C1, 2.08),
+    ("L1 执行层", "机器人 / ROS2", C0, 1.18),
   ]
   for t, sub, col, y in layers:
-    ax.add_patch(FancyBboxPatch((0.4, y), 6.8, 0.95, boxstyle="round", fc="#f7fafc", ec=col, lw=2))
-    ax.add_patch(Rectangle((0.4, y), 0.25, 0.95, fc=col))
-    ax.text(0.75, y + 0.62, t, fontsize=11, fontweight="bold", color=C0, va="center")
-    ax.text(0.75, y + 0.28, sub, fontsize=10, color=C_GRAY, va="center")
-  ax.add_patch(FancyBboxPatch((7.6, 0.7), 1.85, 4.5, boxstyle="round", fc=C0))
-  _multiline(ax, 8.52, 2.95, ["Care", "Orchestrator"], fontsize=11, color="white", fontweight="bold")
+    ax.add_patch(FancyBboxPatch((0.35, y), 9.3, 0.72, boxstyle="round,pad=0.02", fc="#f7fafc", ec=col, lw=1.8))
+    ax.add_patch(Rectangle((0.35, y), 0.22, 0.72, fc=col))
+    ax.text(0.72, y + 0.46, t, fontsize=10.5, fontweight="bold", color=C0, va="center")
+    ax.text(0.72, y + 0.20, sub, fontsize=9.5, color=C_GRAY, va="center")
 
   ax = ax2
-  states = [(1.2, "监测"), (3.4, "对话"), (5.6, "告警"), (7.8, "紧急")]
+  states = [(1.3, "监测"), (3.5, "对话"), (5.7, "告警"), (7.9, "紧急")]
   cols = [C2, C2, C_ORANGE, C_RED]
+  cy = 3.35
   for (x, name), col in zip(states, cols):
-    ax.add_patch(Circle((x, 3.0), 0.75, fc=col, ec="white", lw=2))
-    ax.text(x, 3.0, name, ha="center", va="center", fontsize=11, color="white", fontweight="bold")
-  for x1, x2 in [(1.2, 3.4), (3.4, 5.6), (5.6, 7.8)]:
-    ax.annotate("", xy=(x2 - 0.78, 3.0), xytext=(x1 + 0.78, 3.0),
-                arrowprops=dict(arrowstyle="-|>", color=C0, lw=2))
-  ax.text(5.0, 0.55, "紧急态可打断对话", ha="center", fontsize=10, color=C_RED,
-          bbox=dict(boxstyle="round", fc="#fff5f5", ec=C_RED))
+    ax.add_patch(Circle((x, cy), 0.62, fc=col, ec="white", lw=2))
+    ax.text(x, cy, name, ha="center", va="center", fontsize=10.5, color="white", fontweight="bold")
+  for x1, x2 in [(1.3, 3.5), (3.5, 5.7), (5.7, 7.9)]:
+    ax.annotate("", xy=(x2 - 0.65, cy), xytext=(x1 + 0.65, cy),
+                arrowprops=dict(arrowstyle="-|>", color=C0, lw=1.8))
+  ax.text(5.0, 1.05, "紧急态可打断对话", ha="center", fontsize=10, color=C_RED,
+          bbox=dict(boxstyle="round,pad=0.35", fc="#fff5f5", ec=C_RED, lw=1.2))
   return _save(fig, "project_goals_combo.png")
 
 
@@ -533,33 +533,32 @@ def fig_latency_bar() -> Path:
   return _save(fig, "latency_bar.png")
 
 
-# ── 13. 创新：雷达图 ─────────────────────────────────────────────
+# ── 13. 创新：雷达图（轴标签用 matplotlib 外置，防裁切） ───────
 def fig_innovation_radar() -> Path:
-  fig = _fig()
-  ax = fig.add_axes([0.12, 0.10, 0.76, 0.82], polar=True)
-  # 维度标签拆成两行，避免「复」等字被裁切
-  label_lines = [
-    ["多模态", "融合"],
-    ["安全", "闭环"],
-    ["视觉", "检测"],
-    ["工程", "可复现"],
-    ["居家", "场景"],
-  ]
+  fig = plt.figure(figsize=(FIG_W, FIG_H), facecolor=C_BG)
+  ax = fig.add_axes([0.14, 0.12, 0.72, 0.78], polar=True)
+  labels = ["多模态\n融合", "安全\n闭环", "视觉\n检测", "工程\n可复现", "居家\n场景"]
   vals = [0.90, 0.94, 0.88, 0.92, 0.91]
-  n = len(label_lines)
-  angles = np.linspace(0, 2 * np.pi, n, endpoint=False).tolist()
-  vals_c = vals + vals[:1]
-  angles_c = angles + angles[:1]
+  n = len(labels)
+  angles = np.linspace(np.pi / 2, np.pi / 2 + 2 * np.pi, n, endpoint=False)
+  vals_c = np.concatenate([vals, [vals[0]]])
+  angles_c = np.concatenate([angles, [angles[0]]])
   ax.plot(angles_c, vals_c, "o-", lw=2.2, color=C2, ms=6, zorder=3)
   ax.fill(angles_c, vals_c, alpha=0.16, color=C3, zorder=2)
-  ax.set_ylim(0, 1.28)
-  ax.set_yticks([0.5, 1.0])
-  ax.set_yticklabels(["0.5", "1.0"], fontsize=8, color=C_GRAY)
-  ax.set_xticks([])
+  ax.set_ylim(0, 1.0)
+  ax.set_yticks([0.5])
+  ax.set_yticklabels(["0.5"], fontsize=8, color=C_GRAY)
+  ax.set_xticks(angles)
+  ax.set_xticklabels(labels, fontsize=10, fontweight="bold", color=C0)
+  ax.tick_params(axis="x", pad=32)
   ax.grid(color=C_GRID, ls=":", zorder=0)
-  for ang, lines in zip(angles, label_lines):
-    _multiline(ax, ang, 1.20, lines, fontsize=11, color=C0, fontweight="bold")
-  return _save(fig, "innovation_radar.png")
+  ax.set_title("创新维度自评", fontsize=11, fontweight="bold", color=C0, pad=18)
+  OUT.mkdir(parents=True, exist_ok=True)
+  p = OUT / "innovation_radar.png"
+  fig.savefig(p, facecolor=C_BG, edgecolor="none", bbox_inches="tight", pad_inches=0.14)
+  plt.close(fig)
+  _trim_png(p, tol=252)
+  return p
 
 
 # ── 14. 路线图：里程碑时间轴 ─────────────────────────────────────

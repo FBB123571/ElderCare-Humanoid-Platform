@@ -325,6 +325,43 @@ def _place_figure(
     _set_para_font(cp, 8, color=GRAY)
 
 
+def _place_image_only(
+  slide,
+  path: Path,
+  *,
+  left: float,
+  top: float,
+  max_w: float,
+  max_h: float,
+  fill_ratio: float = 0.94,
+) -> tuple[float, float, float, float]:
+  """仅放图片，返回 (x, y, w, h) 便于紧贴写图注。"""
+  if not path.exists():
+    return left, top, 0.0, 0.0
+  w, h = _fit_image(path, max_w * fill_ratio, max_h * fill_ratio)
+  if w > max_w:
+    h *= max_w / w
+    w = max_w
+  if h > max_h:
+    w *= max_h / h
+    h = max_h
+  x = left + (max_w - w) / 2
+  y = top + (max_h - h) / 2
+  slide.shapes.add_picture(str(path), Inches(x), Inches(y), width=Inches(w), height=Inches(h))
+  return x, y, w, h
+
+
+def _fig_caption_below(slide, left: float, top: float, width: float, text: str) -> None:
+  cap = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(0.24))
+  tf = cap.text_frame
+  tf.word_wrap = True
+  tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+  cp = tf.paragraphs[0]
+  cp.text = text
+  cp.alignment = PP_ALIGN.CENTER
+  _set_para_font(cp, 9, color=GRAY)
+
+
 def _place_right_figure(slide, path: Path, *, caption: str = "") -> None:
   """标准左文右图页的右栏配图（图体与图注分区）。"""
   panel_left = COL_R + 0.04
@@ -807,12 +844,14 @@ def _part_divider(prs, part: str, subtitle: str, preview: list[str], sci_thumb: 
   else:
     thumb_path = None
   if thumb_path and thumb_path.exists():
-    pad = 0.18
+    pad = 0.14
+    img_top = CONTENT_TOP + 0.08
+    img_h = CONTENT_H - 0.14
     _place_figure(
       slide, thumb_path,
-      left=left_w + pad, top=CONTENT_TOP + 0.12,
-      max_w=right_w - 2 * pad, max_h=CONTENT_H - 0.22,
-      caption="", fill_ratio=0.90, framed=True,
+      left=left_w + pad, top=img_top,
+      max_w=right_w - 2 * pad, max_h=img_h,
+      caption="", fill_ratio=0.97, framed=True,
     )
 
 
@@ -874,25 +913,30 @@ def _thanks_slide(prs):
   up.alignment = PP_ALIGN.CENTER
   _set_para_font(up, 9, color=DARK)
 
-  row_y = 3.45
-  thumb_w = 3.35
-  qr_s = 1.35
-  gap = 0.35
+  row_y = 3.38
+  cap_h = 0.24
+  img_h = 1.42
+  thumb_w = 3.25
+  qr_s = 1.28
+  gap = 0.32
   total_w = thumb_w + gap + qr_s
   x0 = cx - total_w / 2
 
   thumb = ASSETS / "ppt_full_dashboard.png"
   if thumb.exists():
-    _place_figure(
-      slide, thumb, left=x0, top=row_y, max_w=thumb_w, max_h=1.55,
-      caption="Web 控制台", fill_ratio=0.96, framed=True,
+    _, _, tw, th = _place_image_only(
+      slide, thumb, left=x0, top=row_y, max_w=thumb_w, max_h=img_h, fill_ratio=0.96,
     )
+    if th > 0:
+      _fig_caption_below(slide, x0, row_y + th + 0.05, thumb_w, "Web 控制台")
   qr = ASSETS / "ppt_demo_qr.png"
   if qr.exists():
-    _place_figure(
-      slide, qr, left=x0 + thumb_w + gap, top=row_y + 0.1,
-      max_w=qr_s, max_h=qr_s, caption="GitHub", fill_ratio=1.0, framed=False,
+    qx = x0 + thumb_w + gap
+    _, _, _, qh = _place_image_only(
+      slide, qr, left=qx, top=row_y + 0.06, max_w=qr_s, max_h=img_h - 0.06, fill_ratio=1.0,
     )
+    if qh > 0:
+      _fig_caption_below(slide, qx, row_y + 0.06 + qh + 0.05, qr_s, "GitHub 仓库")
 
 
 def _slide_qr_dual(prs):
@@ -908,21 +952,25 @@ def _slide_qr_dual(prs):
   demo = ASSETS / "ppt_header_perception.png"
   if not demo.exists():
     demo = ASSETS / "ppt_full_dashboard.png"
-  qr_w = 1.72
-  gap = 0.14
-  img_top = FIG_TOP + 0.06
-  fig_body = FIG_BODY_H - 0.18
+  gap = 0.16
+  cap_h = 0.26
+  img_top = FIG_TOP + 0.10
+  img_body = FIG_BODY_H - cap_h - 0.12
+  qr_col_w = 1.78
+  web_col_w = FIG_WIDTH - qr_col_w - gap
   if qr.exists():
-    _place_figure(
-      slide, qr, left=FIG_LEFT, top=img_top + 0.22,
-      max_w=qr_w, max_h=qr_w + 0.15, caption="仓库二维码", fill_ratio=0.90, framed=False,
+    _, _, qw, qh = _place_image_only(
+      slide, qr, left=FIG_LEFT, top=img_top, max_w=qr_col_w, max_h=min(1.65, img_body), fill_ratio=0.92,
     )
+    if qh > 0:
+      _fig_caption_below(slide, FIG_LEFT, img_top + qh + 0.06, qr_col_w, "仓库二维码")
   if demo.exists():
-    _place_figure(
-      slide, demo, left=FIG_LEFT + qr_w + gap, top=img_top,
-      max_w=FIG_WIDTH - qr_w - gap, max_h=fig_body,
-      caption="Web 感知界面", fill_ratio=0.88, framed=False,
+    web_left = FIG_LEFT + qr_col_w + gap
+    _, _, _, dh = _place_image_only(
+      slide, demo, left=web_left, top=img_top, max_w=web_col_w, max_h=img_body, fill_ratio=0.94,
     )
+    if dh > 0:
+      _fig_caption_below(slide, web_left, img_top + dh + 0.06, web_col_w, "Web 感知界面")
 
 
 def _ensure_qr_code() -> None:
@@ -1080,7 +1128,7 @@ def main():
 
   _slide_open_source(prs)
 
-  _part_divider(prs, "第四部分", "创新 · 计划", ["五个方向", "真机", "软著"], asset_thumb="ppt_robot_commands.png")
+  _part_divider(prs, "第四部分", "创新 · 计划", ["五个方向", "真机", "软著"], asset_thumb="ppt_full_dashboard.png")
 
   _slide_lr(prs, "创新点", [
     "多路信号融合，结果能解释",
@@ -1088,7 +1136,7 @@ def main():
     "视觉用 MediaPipe，不是纯参数滑块",
     "代码和评测脚本都开源",
     "场景对准居家养老",
-  ], "innovation_radar.png", sci=True, figure_kind="chart", caption="创新维度自评")
+  ], "innovation_radar.png", sci=True, figure_kind="chart", caption="")
 
   _slide_lr(prs, "后面打算做什么", [
     "对接 Unitree 等人形真机",
