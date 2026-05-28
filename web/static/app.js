@@ -429,6 +429,190 @@ $("userText").addEventListener("keydown", (e) => {
 updateLabels();
 doReset();
 
+const MOOD_LABELS = { neutral: "平静", happy: "开心", sad: "低落", anxious: "焦虑", alert: "警觉", emergency: "紧急" };
+
+let videoMode = "fall";
+
+function setDhAvatar(mood) {
+  $("dhAvatar").dataset.mood = mood || "neutral";
+  $("dhMoodTag").textContent = MOOD_LABELS[mood] || mood || "平静";
+}
+
+function appendDhLine(type, text, speaker) {
+  const box = $("dhScript");
+  const empty = box.querySelector(".chat-empty");
+  if (empty) empty.remove();
+  const div = document.createElement("div");
+  div.className = `dh-line ${type}`;
+  const who = speaker ? `${speaker}：` : "";
+  div.textContent = who + text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function loadVideoSamples() {
+  const res = await fetch("/api/video/samples");
+  const data = await res.json();
+  const box = $("videoSamples");
+  box.innerHTML = "";
+  const list = videoMode === "fall" ? data.fall || [] : data.mood || [];
+  list.forEach((s) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "sample-chip";
+    chip.textContent = s.name;
+    chip.title = s.note || s.url;
+    chip.addEventListener("click", () => {
+      $("videoUrl").value = s.url;
+    });
+    box.appendChild(chip);
+  });
+}
+
+async function analyzeVideo(mode) {
+  const url = $("videoUrl").value.trim();
+  const file = $("videoFile").files?.[0];
+  const fd = new FormData();
+  fd.append("mode", mode);
+  fd.append("max_frames", "100");
+  fd.append("frame_stride", "3");
+  fd.append("auto_alert", mode === "fall" ? "true" : "false");
+  if (url) fd.append("url", url);
+  if (file) fd.append("file", file);
+  if (!url && !file) {
+    $("videoStatus").textContent = "请填写视频 URL 或上传 mp4 文件";
+    return;
+  }
+  $("videoStatus").textContent = "正在下载并分析视频（可能需要 1～2 分钟）…";
+  $("videoAlert").classList.add("hidden");
+  $("videoEmotionChart").classList.add("hidden");
+  const res = await fetch("/api/video/analyze", { method: "POST", body: fd });
+  const data = await res.json();
+  if (!data.ok) {
+    $("videoStatus").textContent = data.error || "分析失败";
+    return;
+  }
+  const fall = data.fall || {};
+  const emo = data.emotion || {};
+  $("videoStatus").textContent =
+    `已分析 ${data.frames_analyzed} 帧 · 时长约 ${data.duration_s}s · 主情绪 ${MOOD_LABELS[emo.dominant] || emo.dominant}`;
+  if (fall.preview_jpeg_b64) {
+    const img = $("videoPreview");
+    img.src = `data:image/jpeg;base64,${fall.preview_jpeg_b64}`;
+    img.classList.remove("hidden");
+  }
+  if (fall.detected) {
+    const alert = $("videoAlert");
+    alert.classList.remove("hidden");
+    alert.innerHTML =
+      `<strong>⚠️ 跌倒预警</strong> 约 t=${fall.first_alert_t_s ?? "?"}s · 置信 ${fall.max_score} · 已联动紧急决策`;
+    if (data.alert) {
+      renderTick(data.alert);
+      await refreshLogs();
+    }
+  }
+  if (emo.scores) {
+    const chart = $("videoEmotionChart");
+    chart.classList.remove("hidden");
+    chart.innerHTML = "<strong>情绪分布（视频启发式）</strong>";
+    Object.entries(emo.scores).forEach(([k, v]) => {
+      const row = document.createElement("div");
+      row.className = "emotion-bar";
+      row.innerHTML = `<span>${MOOD_LABELS[k] || k}</span><i><b style="width:${Math.round(v * 100)}%"></b></i> ${(v * 100).toFixed(0)}%`;
+      chart.appendChild(row);
+    });
+    setEmotion(emo.dominant || "neutral");
+    setDhAvatar(emo.dominant);
+  }
+}
+
+async function dhSend() {
+  const msg = $("dhInput").value.trim();
+  if (!msg) return;
+  $("btnDhSend").disabled = true;
+  try {
+    const res = await fetch("/api/digital_human/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: msg, emotion: $("emotion").value }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      appendDhLine("system", data.error || "发送失败", "");
+      return;
+    }
+    appendDhLine("elder", msg, "老人");
+    appendDhLine("companion", data.reply, data.companion_name || "小护");
+    setDhAvatar(data.avatar);
+    if (data.tick) {
+      renderTick(data.tick);
+      await refreshLogs();
+    }
+    $("dhInput").value = "";
+  } finally {
+    $("btnDhSend").disabled = false;
+  }
+}
+
+let dhActing = false;
+
+async function dhAct() {
+  if (dhActing) return;
+  dhActing = true;
+  $("btnDhAct").disabled = true;
+  $("dhScript").innerHTML = "";
+  await fetch("/api/reset", { method: "POST" });
+  const es = new EventSource("/api/digital_human/act");
+  es.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === "stage") {
+      appendDhLine("stage", msg.text, msg.speaker);
+    } else if (msg.type === "elder") {
+      appendDhLine("elder", msg.text, msg.speaker);
+    } else if (msg.type === "companion") {
+      appendDhLine("companion", msg.text, msg.speaker);
+      setDhAvatar(msg.avatar || "neutral");
+      if (msg.tick) {
+        renderTick(msg.tick);
+        refreshLogs();
+      }
+    } else if (msg.type === "done") {
+      es.close();
+      dhActing = false;
+      $("btnDhAct").disabled = false;
+      setDhAvatar(msg.avatar || "neutral");
+      appendDhLine("system", "情景剧结束", "");
+    }
+  };
+  es.onerror = () => {
+    es.close();
+    dhActing = false;
+    $("btnDhAct").disabled = false;
+  };
+}
+
+document.querySelectorAll(".video-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".video-tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    videoMode = tab.dataset.vtab;
+    loadVideoSamples();
+  });
+});
+
+$("btnVideoFall").addEventListener("click", () => analyzeVideo("fall"));
+$("btnVideoMood").addEventListener("click", () => analyzeVideo("emotion"));
+$("btnDhSend").addEventListener("click", dhSend);
+$("btnDhAct").addEventListener("click", dhAct);
+$("dhInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    dhSend();
+  }
+});
+
+loadVideoSamples();
+
 fetch("/api/health")
   .then((r) => r.json())
   .then(() => {

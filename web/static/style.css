@@ -442,6 +442,103 @@ textarea::placeholder { color: var(--muted); }
 .cmd-badge.approach { background: rgba(45,212,191,.2); color: #5eead4; }
 .cmd-payload { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.feature-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+@media (max-width: 1100px) {
+  .feature-row { grid-template-columns: 1fr; }
+}
+.video-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.video-tab {
+  padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); cursor: pointer; font-size: 0.82rem;
+}
+.video-tab.active {
+  background: rgba(56,189,248,.15); color: #7dd3fc; border-color: rgba(56,189,248,.35);
+}
+#videoUrl {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: rgba(15,23,42,.6); color: var(--text);
+  font-size: 0.85rem;
+}
+.video-samples { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.sample-chip {
+  font-size: 0.72rem; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+  border: 1px dashed var(--border); color: var(--muted); background: rgba(15,23,42,.4);
+}
+.sample-chip:hover { border-color: #38bdf8; color: #7dd3fc; }
+.video-alert {
+  margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+  background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.35);
+  color: #fecaca; font-size: 0.86rem;
+}
+.emotion-chart {
+  margin-top: 12px; padding: 10px; border-radius: 10px;
+  background: rgba(15,23,42,.5); border: 1px solid var(--border);
+  font-size: 0.78rem; color: var(--text2); max-height: 140px; overflow-y: auto;
+}
+.emotion-bar { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.emotion-bar span { width: 52px; color: var(--muted); }
+.emotion-bar i {
+  flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.08);
+  display: block; overflow: hidden;
+}
+.emotion-bar i b {
+  display: block; height: 100%; background: linear-gradient(90deg, #38bdf8, #34d399);
+}
+
+.dh-stage {
+  display: grid; grid-template-columns: 140px 1fr; gap: 16px; min-height: 280px;
+}
+@media (max-width: 700px) {
+  .dh-stage { grid-template-columns: 1fr; }
+}
+.dh-avatar {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 16px; border-radius: 16px;
+  background: linear-gradient(160deg, rgba(30,58,95,.9), rgba(15,23,42,.95));
+  border: 1px solid var(--border);
+}
+.dh-face {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(145deg, #fde68a, #fbbf24);
+  position: relative; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.dh-eye {
+  position: absolute; top: 28px; width: 8px; height: 8px; border-radius: 50%;
+  background: #1e293b;
+}
+.dh-eye.left { left: 22px; }
+.dh-eye.right { right: 22px; }
+.dh-mouth {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  width: 22px; height: 10px; border-radius: 0 0 12px 12px;
+  border: 2px solid #1e293b; border-top: none;
+}
+.dh-avatar[data-mood="happy"] .dh-mouth { border-radius: 12px; height: 12px; border-top: 2px solid #1e293b; }
+.dh-avatar[data-mood="sad"] .dh-mouth { width: 16px; border-radius: 12px 12px 0 0; border-top: 2px solid #1e293b; border-bottom: none; bottom: 16px; }
+.dh-avatar[data-mood="anxious"] .dh-eye { animation: blink 0.4s infinite alternate; }
+.dh-avatar[data-mood="emergency"] .dh-face { background: linear-gradient(145deg, #fca5a5, #f87171); }
+.dh-name { margin-top: 10px; font-weight: 600; color: #e2e8f0; }
+.dh-mood-tag {
+  margin-top: 4px; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px;
+  background: rgba(56,189,248,.15); color: #7dd3fc;
+}
+.dh-script {
+  height: 280px; overflow-y: auto; padding: 8px;
+  display: flex; flex-direction: column; gap: 10px;
+  background: rgba(15,23,42,.45); border-radius: 12px; border: 1px solid var(--border);
+}
+.dh-line { font-size: 0.84rem; line-height: 1.5; animation: msg-in 0.35s ease; }
+.dh-line.elder { color: #fde68a; }
+.dh-line.companion { color: #a5f3fc; }
+.dh-line.stage { color: var(--muted); font-style: italic; font-size: 0.8rem; }
+.dh-line.system { color: var(--ok); font-size: 0.78rem; }
+@keyframes blink { from { transform: scaleY(1); } to { transform: scaleY(0.3); } }
+
 .footer {
   text-align: center; padding: 20px; margin-top: 8px;
   font-size: 0.75rem; color: var(--muted); letter-spacing: 0.02em;

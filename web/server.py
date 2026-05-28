@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -14,7 +15,7 @@ from web.session import SESSION
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = Path(__file__).resolve().parent / "static"
 
-app = FastAPI(title="CareCompanion", version="1.0.0")
+app = FastAPI(title="CareCompanion", version="1.1.0")
 app.add_middleware(
   CORSMiddleware,
   allow_origins=["*"],
@@ -34,6 +35,11 @@ class TickRequest(BaseModel):
   use_vision: bool = False
 
 
+class DigitalHumanChatRequest(BaseModel):
+  message: str = ""
+  emotion: str = "neutral"
+
+
 @app.get("/")
 def index():
   return FileResponse(STATIC / "index.html")
@@ -41,7 +47,7 @@ def index():
 
 @app.get("/api/health")
 def health():
-  return {"ok": True, "service": "CareCompanion Web"}
+  return {"ok": True, "service": "CareCompanion Web", "features": ["video_url", "digital_human"]}
 
 
 @app.post("/api/reset")
@@ -56,7 +62,10 @@ def status():
     "state": SESSION.orch.state.value,
     "robot_history": SESSION.adapter.history[-30:],
     "chat_log": SESSION.chat_log[-40:],
+    "dh_log": SESSION.dh_log[-50:],
     "system_logs": SESSION.orch.logs[-20:],
+    "dh_avatar": SESSION.dh_avatar,
+    "last_video": SESSION.last_video is not None,
   }
 
 
@@ -76,6 +85,54 @@ async def vision_analyze(file: UploadFile = File(...)):
 @app.get("/api/vision/last")
 def vision_last():
   return {"ok": SESSION.last_vision is not None, "metrics": SESSION.last_vision}
+
+
+@app.get("/api/video/samples")
+def video_samples():
+  return SESSION.list_video_samples()
+
+
+@app.post("/api/video/analyze")
+async def video_analyze(
+  mode: str = Form("both"),
+  url: Optional[str] = Form(None),
+  max_frames: int = Form(120),
+  frame_stride: int = Form(2),
+  auto_alert: bool = Form(True),
+  file: Optional[UploadFile] = File(None),
+):
+  upload_bytes = None
+  if file and file.filename:
+    upload_bytes = await file.read()
+  return SESSION.analyze_video(
+    url=url,
+    upload_bytes=upload_bytes,
+    mode=mode,
+    max_frames=max_frames,
+    frame_stride=frame_stride,
+    auto_alert=auto_alert,
+  )
+
+
+@app.get("/api/video/last")
+def video_last():
+  return {"ok": SESSION.last_video is not None, "result": SESSION.last_video}
+
+
+@app.post("/api/digital_human/chat")
+def digital_human_chat(body: DigitalHumanChatRequest):
+  return SESSION.digital_human_chat(body.message, body.emotion)
+
+
+@app.get("/api/digital_human/act")
+async def digital_human_act():
+  SESSION.reset()
+
+  async def event_gen():
+    async for item in SESSION.stream_acting():
+      yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+
+  return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
 @app.get("/api/demo/stream")

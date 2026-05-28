@@ -259,6 +259,71 @@
       </section>
     </main>
 
+    <section class="feature-row">
+      <section class="panel video-lab">
+        <div class="panel-head">
+          <span class="panel-icon">🎬</span>
+          <div>
+            <h2>网络视频分析</h2>
+            <p>粘贴视频链接 · 跌倒预警 · 情绪轨迹</p>
+          </div>
+        </div>
+        <div class="video-tabs">
+          <button type="button" class="video-tab active" data-vtab="fall">跌倒检测</button>
+          <button type="button" class="video-tab" data-vtab="mood">心情分析</button>
+        </div>
+        <div class="field">
+          <label for="videoUrl">视频 URL（mp4 直链）</label>
+          <input type="url" id="videoUrl" placeholder="https://.../xxx.mp4" />
+        </div>
+        <div class="video-samples" id="videoSamples"></div>
+        <div class="vision-actions">
+          <label class="btn ghost sm vision-upload-btn">
+            上传视频文件
+            <input type="file" id="videoFile" accept="video/mp4,video/webm,video/*" hidden />
+          </label>
+          <button type="button" id="btnVideoFall" class="btn primary sm">分析并跌倒预警</button>
+          <button type="button" id="btnVideoMood" class="btn accent sm">分析心情轨迹</button>
+        </div>
+        <p id="videoStatus" class="vision-status">支持公开样片或自采 mp4；分析后自动触发紧急决策（跌倒模式）</p>
+        <div id="videoAlert" class="video-alert hidden"></div>
+        <img id="videoPreview" class="cam-preview hidden" alt="关键帧" />
+        <div id="videoEmotionChart" class="emotion-chart hidden"></div>
+      </section>
+
+      <section class="panel dh-panel">
+        <div class="panel-head">
+          <span class="panel-icon">🧑‍⚕️</span>
+          <div>
+            <h2>数字人陪护剧场</h2>
+            <p>小护 · 与老人自然对话 · 情景剧演绎</p>
+          </div>
+        </div>
+        <div class="dh-stage">
+          <div id="dhAvatar" class="dh-avatar" data-mood="neutral">
+            <div class="dh-face">
+              <span class="dh-eye left"></span>
+              <span class="dh-eye right"></span>
+              <span class="dh-mouth"></span>
+            </div>
+            <div class="dh-name">小护</div>
+            <div id="dhMoodTag" class="dh-mood-tag">平静</div>
+          </div>
+          <div id="dhScript" class="dh-script">
+            <div class="chat-empty">点击「开始情景剧」或输入话语与数字人交流</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="dhInput">对老人说 / 老人说</label>
+          <textarea id="dhInput" rows="2" placeholder="例如：我最近睡不好，心里慌…"></textarea>
+        </div>
+        <div class="actions">
+          <button type="button" id="btnDhSend" class="btn primary sm">发送对话</button>
+          <button type="button" id="btnDhAct" class="btn accent sm">开始情景剧</button>
+        </div>
+      </section>
+    </section>
+
     <footer class="footer">
       CareCompanion · 感知 → 决策 → 执行 · 可部署人形机器人 ROS2
     </footer>

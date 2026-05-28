@@ -3,15 +3,28 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import asdict, is_dataclass
+from pathlib import Path
 
 import base64
 
+import yaml
+
 from care_companion.action.robot_adapter import SimulationAdapter
+from care_companion.cognition.digital_human import (
+  ACTING_SCRIPT,
+  COMPANION_GREETING,
+  COMPANION_NAME,
+  companion_avatar_state,
+)
 from care_companion.core.config import load_config
 from care_companion.core.events import PerceptionFrame
 from care_companion.core.orchestrator import CareOrchestrator
 from care_companion.perception.pose_pipeline import PosePipeline
+from care_companion.perception.video_analyzer import VideoAnalyzer
+from care_companion.perception.video_fetch import cleanup_path, resolve_video_source
 from simulation.scenarios import demo_scenarios
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _serialize(obj):
@@ -33,8 +46,12 @@ class CareSession:
     self.adapter = SimulationAdapter()
     self.orch = CareOrchestrator(self.cfg, self.adapter)
     self.pose = PosePipeline(self.cfg.get("fall", {}))
+    self.video = VideoAnalyzer(self.cfg)
     self.chat_log: list[dict] = []
+    self.dh_log: list[dict] = []
     self.last_vision: dict | None = None
+    self.last_video: dict | None = None
+    self.dh_avatar = "neutral"
 
   def analyze_vision(self, image_bytes: bytes, dt: float = 0.1) -> dict:
     try:
@@ -109,6 +126,170 @@ class CareSession:
     if result["reply"]:
       self.chat_log.append({"role": "robot", "text": result["reply"]})
     return result
+
+  def list_video_samples(self) -> dict:
+    path = ROOT / "config" / "video_samples.yaml"
+    if not path.is_file():
+      return {"fall": [], "mood": []}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return {"fall": data.get("fall", []), "mood": data.get("mood", [])}
+
+  def analyze_video(
+    self,
+    *,
+    url: str | None = None,
+    upload_bytes: bytes | None = None,
+    mode: str = "both",
+    max_frames: int = 120,
+    frame_stride: int = 2,
+    auto_alert: bool = True,
+  ) -> dict:
+    path = None
+    try:
+      path, source = resolve_video_source(url=url, upload_bytes=upload_bytes)
+      raw = self.video.analyze_file(path, max_frames=max_frames, frame_stride=frame_stride)
+      if not raw.get("ok"):
+        return raw
+      out = {"ok": True, "source": source, **raw}
+      self.last_video = out
+
+      if mode in ("fall", "both") and raw["fall"]["detected"] and auto_alert:
+        tick_payload = {
+          "heart_rate": 102,
+          "spo2": 93,
+          "activity_level": 0.03,
+          "skeleton_aspect_ratio": 0.3,
+          "skeleton_dy": 0.0,
+          "emotion": "anxious",
+          "user_text": "【视频分析】检测到跌倒事件",
+        }
+        alert = self.tick(tick_payload)
+        out["alert"] = alert
+        self.dh_log.append({
+          "role": "system",
+          "text": f"⚠️ 视频跌倒预警：t≈{raw['fall'].get('first_alert_t_s')}s，已触发紧急决策",
+        })
+
+      if mode in ("emotion", "both"):
+        emo = raw["emotion"]["dominant"]
+        self.dh_avatar = companion_avatar_state("normal", emo)
+
+      return out
+    except ValueError as exc:
+      return {"ok": False, "error": str(exc)}
+    except Exception as exc:
+      return {"ok": False, "error": f"视频分析失败: {exc}"}
+    finally:
+      cleanup_path(path)
+
+  def digital_human_chat(self, message: str, emotion: str | None = None) -> dict:
+    text = (message or "").strip()
+    if not text:
+      return {"ok": False, "error": "请输入对话"}
+    self.dh_log.append({"role": "elder", "text": text, "speaker": "老人"})
+    payload = {
+      "heart_rate": 78,
+      "spo2": 97,
+      "activity_level": 0.25,
+      "skeleton_aspect_ratio": 1.0,
+      "skeleton_dy": 0.0,
+      "emotion": emotion or "neutral",
+      "user_text": text,
+    }
+    result = self.tick(payload)
+    reply = result.get("reply") or "我在听，您慢慢说。"
+    self.dh_log.append({
+      "role": "companion",
+      "text": reply,
+      "speaker": COMPANION_NAME,
+      "avatar": companion_avatar_state(result["risk"]["level"], emotion or "neutral"),
+    })
+    self.dh_avatar = companion_avatar_state(result["risk"]["level"], emotion or "neutral")
+    return {
+      "ok": True,
+      "reply": reply,
+      "tick": result,
+      "avatar": self.dh_avatar,
+      "companion_name": COMPANION_NAME,
+    }
+
+  async def stream_acting(self):
+    yield {
+      "type": "stage",
+      "text": COMPANION_GREETING,
+      "speaker": COMPANION_NAME,
+      "avatar": "neutral",
+    }
+    self.dh_log.append({"role": "companion", "text": COMPANION_GREETING, "speaker": COMPANION_NAME})
+
+    for line in ACTING_SCRIPT:
+      if line.pause_s > 0:
+        yield {"type": "pause", "seconds": line.pause_s}
+        await asyncio.sleep(line.pause_s)
+
+      if line.speaker == "stage":
+        yield {"type": "stage", "text": line.text, "speaker": "旁白"}
+        self.dh_log.append({"role": "system", "text": line.text})
+        continue
+
+      if line.speaker == "elder" and line.text and line.frame is None:
+        yield {"type": "elder", "text": line.text, "speaker": "老人"}
+        self.dh_log.append({"role": "elder", "text": line.text, "speaker": "老人"})
+        result = self.tick({
+          "heart_rate": 76,
+          "spo2": 97,
+          "activity_level": 0.2,
+          "skeleton_aspect_ratio": 1.0,
+          "skeleton_dy": 0.0,
+          "emotion": "sad",
+          "user_text": line.text,
+        })
+        self.dh_avatar = companion_avatar_state(result["risk"]["level"], "sad")
+        reply = result.get("reply") or ""
+        if reply:
+          yield {
+            "type": "companion",
+            "text": reply,
+            "speaker": COMPANION_NAME,
+            "avatar": self.dh_avatar,
+          }
+          self.dh_log.append({"role": "companion", "text": reply, "speaker": COMPANION_NAME})
+        await asyncio.sleep(0.8)
+        continue
+
+      if line.frame is not None:
+        f = line.frame
+        payload = {
+          "heart_rate": f.heart_rate,
+          "spo2": f.spo2,
+          "activity_level": f.activity_level,
+          "skeleton_aspect_ratio": f.skeleton_aspect_ratio,
+          "skeleton_dy": f.skeleton_dy,
+          "emotion": f.emotion,
+          "user_text": f.user_text or "",
+        }
+        if f.fall_detected:
+          payload["skeleton_aspect_ratio"] = min(payload["skeleton_aspect_ratio"], 0.35)
+        result = self.tick(payload)
+        self.dh_avatar = companion_avatar_state(result["risk"]["level"], f.emotion)
+        if line.text:
+          yield {"type": "elder", "text": line.text, "speaker": "老人"}
+        yield {
+          "type": "companion",
+          "text": result.get("reply") or "",
+          "speaker": COMPANION_NAME,
+          "avatar": self.dh_avatar,
+          "tick": _serialize(result),
+        }
+        if result.get("reply"):
+          self.dh_log.append({
+            "role": "companion",
+            "text": result["reply"],
+            "speaker": COMPANION_NAME,
+          })
+        await asyncio.sleep(0.5)
+
+    yield {"type": "done", "avatar": self.dh_avatar}
 
   async def stream_demo(self):
     for step in demo_scenarios():
