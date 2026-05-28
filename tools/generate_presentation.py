@@ -389,26 +389,108 @@ def _info_cards_column(slide, left: float, width: float, rows: list[tuple[str, s
     c1.margin_right = Pt(4)
 
 
+def _bullets_plain(slide, items: list[str], *, size: int = 12):
+  """左栏编号条目（白底卡片，与答辩提纲蓝底面板区分）。"""
+  y = CONTENT_TOP + 0.10
+  for i, line in enumerate(items):
+    chip = slide.shapes.add_shape(1, Inches(COL_L), Inches(y), Inches(COL_L_W), Inches(0.54))
+    chip.fill.solid()
+    chip.fill.fore_color.rgb = WHITE
+    chip.line.color.rgb = BORDER
+    num = slide.shapes.add_shape(9, Inches(COL_L + 0.12), Inches(y + 0.12), Inches(0.28), Inches(0.28))
+    num.fill.solid()
+    num.fill.fore_color.rgb = ACCENT if i == 0 else DARK
+    num.line.fill.background()
+    nb = slide.shapes.add_textbox(Inches(COL_L + 0.12), Inches(y + 0.15), Inches(0.28), Inches(0.22))
+    np = nb.text_frame.paragraphs[0]
+    np.text = str(i + 1)
+    np.alignment = PP_ALIGN.CENTER
+    _set_para_font(np, 9, bold=True, color=WHITE)
+    tb = slide.shapes.add_textbox(Inches(COL_L + 0.48), Inches(y + 0.14), Inches(COL_L_W - 0.58), Inches(0.34))
+    p = tb.text_frame.paragraphs[0]
+    p.text = line
+    p.word_wrap = True
+    _set_para_font(p, size, color=DARK)
+    y += 0.60
+
+
+def _slide_lr_dual_fig(
+  prs,
+  title: str,
+  bullets: list[str],
+  fig_top: str,
+  fig_bottom: str,
+  *,
+  cap_top: str = "",
+  cap_bottom: str = "",
+  takeaway: str = "",
+):
+  slide = _content_slide(prs, title)
+  _bullets_panel(slide, bullets, takeaway=takeaway, size=12)
+  _draw_figure_panel(slide, left=COL_R + 0.04, top=FIG_TOP - 0.02, width=COL_R_W - 0.08, height=FIG_TOTAL_H)
+  gap = 0.10
+  half = (FIG_BODY_H - gap) / 2
+  top_y = FIG_TOP
+  for fig_name, cap, y, h in [
+    (fig_top, cap_top, top_y, half),
+    (fig_bottom, cap_bottom, top_y + half + gap, half),
+  ]:
+    path = SCI / fig_name
+    if path.exists():
+      _place_figure(
+        slide, path, left=FIG_LEFT, top=y, max_w=FIG_WIDTH, max_h=h + FIG_CAP_H * 0.45,
+        caption=cap, fill_ratio=0.93, framed=False,
+      )
+  return slide
+
+
 def _slide_team_info(prs):
   slide = _content_slide(prs, "参赛信息")
-  _bullets_panel(slide, [
+  _bullets_plain(slide, [
     "赛项：创新赛 · 机器人创新赛道",
     "作品：智能养老陪伴机器人仿真平台",
-    "（基于大语言模型）",
     "特色：理论清晰 · 系统可演示 · 指标可复现",
-  ], size=12)
-  _info_cards_column(
-    slide, COL_R, COL_R_W,
-    [
-      ("团队", TEAM_NAME),
-      ("学校", SCHOOL),
-      ("队长", CAPTAIN),
-      ("队员", MEMBER),
-      ("指导教师", ADVISOR),
-      ("团队编号", TEAM_ID),
-      ("作品编号", PROJECT_ID),
-    ],
-  )
+  ], size=11)
+
+  panel = slide.shapes.add_shape(1, Inches(COL_R), Inches(CONTENT_TOP), Inches(COL_R_W), Inches(CONTENT_H))
+  panel.fill.solid()
+  panel.fill.fore_color.rgb = WHITE
+  panel.line.color.rgb = BORDER
+
+  dash = ASSETS / "ppt_full_dashboard.png"
+  if dash.exists():
+    _place_figure(
+      slide, dash, left=COL_R + 0.10, top=CONTENT_TOP + 0.08,
+      max_w=COL_R_W - 0.20, max_h=1.55, caption="Web 控制台预览", fill_ratio=0.96, framed=False,
+    )
+
+  tbl_top = CONTENT_TOP + 1.72
+  tbl_h = CONTENT_H - 1.80
+  rows = [
+    ("团队", TEAM_NAME),
+    ("学校", SCHOOL),
+    ("队长 / 队员", f"{CAPTAIN} / {MEMBER}"),
+    ("指导教师", ADVISOR),
+    ("团队编号", TEAM_ID),
+    ("作品编号", PROJECT_ID),
+  ]
+  tbl = slide.shapes.add_table(len(rows), 2, Inches(COL_R + 0.08), Inches(tbl_top),
+                             Inches(COL_R_W - 0.16), Inches(tbl_h)).table
+  tbl.columns[0].width = Inches(0.88)
+  tbl.columns[1].width = Inches(COL_R_W - 0.16 - 0.88)
+  for r, (label, value) in enumerate(rows):
+    _style_cell(tbl.cell(r, 0), label, bg=DARK, fg=WHITE, bold=True, size=9)
+    c1 = tbl.cell(r, 1)
+    c1.text = ""
+    p = c1.text_frame.paragraphs[0]
+    p.text = value
+    p.alignment = PP_ALIGN.LEFT
+    fs = 8 if len(value) > 24 else 9
+    _set_para_font(p, fs, color=DARK)
+    c1.text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    c1.text_frame.word_wrap = True
+    c1.fill.solid()
+    c1.fill.fore_color.rgb = LIGHT_BLUE if r % 2 == 0 else WHITE
   return slide
 
 
@@ -569,20 +651,22 @@ def _hero_cover(prs):
   deco.line.fill.background()
 
   texts = [
-    ("CareCompanion", 32, WHITE, True),
-    ("智能养老陪伴机器人仿真平台", 15, RGBColor(147, 197, 253), True),
-    ("感知 · 决策 · 执行  一体化闭环", 13, RGBColor(226, 232, 240), False),
+    ("CareCompanion", 28, WHITE, True),
+    ("智能养老陪伴机器人仿真平台", 14, RGBColor(147, 197, 253), True),
+    ("感知 · 决策 · 执行  一体化闭环", 12, RGBColor(226, 232, 240), False),
   ]
-  ty = HEADER_H + 0.45
+  ty = HEADER_H + 0.42
   for text, sz, col, bold in texts:
-    box = slide.shapes.add_textbox(Inches(rx + 0.25), Inches(ty), Inches(4.5), Inches(0.5))
-    p = box.text_frame.paragraphs[0]
+    box = slide.shapes.add_textbox(Inches(rx + 0.22), Inches(ty), Inches(4.55), Inches(0.46))
+    tf = box.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
     p.text = text
     _set_para_font(p, sz, bold=bold, color=col)
-    ty += 0.48 if sz > 20 else 0.38
+    ty += 0.50 if sz > 20 else 0.36
 
-  card_y = ty + 0.2
-  card = slide.shapes.add_shape(1, Inches(rx + 0.25), Inches(card_y), Inches(4.35), Inches(1.45))
+  card_y = ty + 0.28
+  card = slide.shapes.add_shape(1, Inches(rx + 0.22), Inches(card_y), Inches(4.4), Inches(1.52))
   card.fill.solid()
   card.fill.fore_color.rgb = RGBColor(30, 64, 130)
   card.line.color.rgb = RGBColor(100, 140, 200)
@@ -593,18 +677,20 @@ def _hero_cover(prs):
     f"指导教师：{ADVISOR}",
     f"作品编号：{PROJECT_ID}",
   ]
-  box = slide.shapes.add_textbox(Inches(rx + 0.4), Inches(card_y + 0.15), Inches(4.0), Inches(1.2))
+  box = slide.shapes.add_textbox(Inches(rx + 0.36), Inches(card_y + 0.12), Inches(4.1), Inches(1.28))
   tf = box.text_frame
+  tf.word_wrap = True
   for i, line in enumerate(infos):
     p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
     p.text = line
     _set_para_font(p, 10, color=RGBColor(220, 230, 255))
-    p.space_after = Pt(5)
+    p.space_after = Pt(4)
 
-  tag = slide.shapes.add_textbox(Inches(rx + 0.25), Inches(sh - 0.5), Inches(4.4), Inches(0.35))
+  tag = slide.shapes.add_textbox(Inches(rx + 0.22), Inches(card_y + 1.58), Inches(4.4), Inches(0.32))
   tp = tag.text_frame.paragraphs[0]
-  tp.text = PROJECT_TITLE
-  _set_para_font(tp, 9, color=RGBColor(148, 163, 184))
+  tp.text = "基于大语言模型的居家养老陪伴仿真平台"
+  tp.alignment = PP_ALIGN.CENTER
+  _set_para_font(tp, 8, color=RGBColor(148, 163, 184))
 
 
 def _part_divider(prs, part: str, subtitle: str, preview: list[str], sci_thumb: str = "", asset_thumb: str = ""):
@@ -829,7 +915,7 @@ def main():
   _slide_team_info(prs)
 
   _part_divider(prs, "第一部分", "背景 · 需求 · 定位",
-                ["老龄化", "方案对比", "项目目标"], sci_thumb="aging_trend.png")
+                ["老龄化", "方案对比", "项目目标"], asset_thumb="ppt_emotion_input.png")
 
   _slide_lr(prs, "社会背景：老龄化与跌倒风险", [
     "独居老人变多，跌倒了没人及时发现很常见",
@@ -846,23 +932,24 @@ def main():
     "仓库里带 Web 和脚本，老师可以现场点着看",
   ], "compare_table.png", sci=True, figure_kind="chart", caption="方案对比表")
 
-  _slide_lr(prs, "项目要做什么", [
+  _slide_lr_dual_fig(prs, "项目要做什么", [
     "CareCompanion：养老场景的人形陪伴软件",
     "核心是 CareOrchestrator，负责模块调度",
     "跌倒要能检、要能触发紧急流程",
     "对话和机器人动作要能联动",
-  ], "architecture_layers.png", sci=True, caption="系统四层架构",
+  ], "architecture_layers.png", "state_machine.png",
+     cap_top="四层架构", cap_bottom="状态机概览",
      takeaway="目标在系统里都能点到")
 
   _part_divider(prs, "第二部分", "模型 · 架构 · 算法",
-                ["四层架构", "状态机", "融合与检测"], sci_thumb="state_machine.png")
+                ["四层架构", "状态机", "融合与检测"], sci_thumb="risk_fusion.png")
 
   _slide_lr(prs, "系统怎么分层", [
     "最上面是 Web/GUI，老师和评委直接看",
     "中间做风险、对话和任务规划",
     "下面接跌倒、情绪、视觉等感知",
     "最底层通过适配器连仿真或 ROS2",
-  ], "architecture_layers.png", sci=True, caption="分层与 CareOrchestrator")
+  ], "architecture_layers.png", sci=True, caption="四层架构详图")
 
   _slide_lr(prs, "状态机怎么切换", [
     "平时监测，对话时走倾诉流程",
@@ -917,7 +1004,8 @@ def main():
     "内置剧本：日常—倾诉—跌倒",
   ], "ppt_full_dashboard.png", diagram=False, caption="主界面")
 
-  _screenshot_slide(prs, "骨架分析（上传照片）", "ppt_mediapipe_pose.png", "全身照 → 骨架叠加", large=True)
+  _screenshot_duo(prs, "骨架分析（上传照片）", "ppt_mediapipe_pose.png", "ppt_risk_panel.png",
+                  "MediaPipe 骨架叠加", "风险面板联动")
   _screenshot_duo(prs, "风险与情绪输入", "ppt_risk_panel.png", "ppt_emotion_input.png", "风险面板", "情绪输入")
   _screenshot_duo(prs, "紧急过程记录", "ppt_chat_emergency.png", "ppt_robot_commands.png", "对话日志", "机器人指令")
   _screenshot_slide(prs, "紧急时感知页", "ppt_header_perception.png", "状态切到紧急后的感知区")
@@ -927,7 +1015,7 @@ def main():
     "紧急链路脚本跑通率 100%",
     "单帧决策在 CPU 上 < 50ms（见右下图）",
     "单元测试和无头演示都过了",
-  ], "eval_results.png", sci=True, figure_kind="chart", caption="评测结果（6 场景）",
+  ], "eval_results.png", sci=True, figure_kind="chart", caption="P/R/F1 均为 100%（见左栏）",
      takeaway="数据：fall_eval_report.json")
 
   _slide_lr(prs, "性能与延迟", [
@@ -939,7 +1027,7 @@ def main():
 
   _slide_open_source(prs)
 
-  _part_divider(prs, "第四部分", "创新 · 计划", ["五个方向", "真机", "软著"], sci_thumb="roadmap_gantt.png")
+  _part_divider(prs, "第四部分", "创新 · 计划", ["五个方向", "真机", "软著"], asset_thumb="ppt_robot_commands.png")
 
   _slide_lr(prs, "创新点", [
     "多路信号融合，结果能解释",

@@ -140,12 +140,13 @@ def fig_aging_trend() -> Path:
   ratio = np.array([13.5, 16.5, 20.5, 24.0])
   ax.bar(years.astype(str), ratio, width=0.55, color=C2, edgecolor=C0, linewidth=0.6, alpha=0.85, label="60+ 人口占比")
   ax.plot(years.astype(str), ratio, "o-", color=C_RED, lw=2, ms=7, label="趋势")
-  ax.set_ylabel("占比 (%)", fontweight="bold")
-  ax.set_title("(a) 我国老龄化与居家监护需求", loc="left", fontsize=11, fontweight="bold", color=C0)
+  ax.set_ylabel("占比 (%)", fontweight="bold", fontsize=11)
+  ax.set_title("(a) 我国老龄化与居家监护需求", loc="left", fontsize=12, fontweight="bold", color=C0, pad=10)
   ax.set_ylim(0, 28)
   ax.grid(axis="y", ls=":", color=C_GRID)
   for spine in ("top", "right"):
     ax.spines[spine].set_visible(False)
+  ax.tick_params(axis="both", labelsize=10)
   ax.annotate(
     "跌倒发现空窗↑", xy=(2, 20.5), xytext=(2.6, 23),
     arrowprops=dict(arrowstyle="->", color=C_RED, lw=1.2),
@@ -316,8 +317,8 @@ def fig_fall_decision_tree() -> Path:
     ax.text(cx, cy, text, ha="center", va="center", fontsize=9, color="white", fontweight="bold")
 
   rect(3.15, "MediaPipe 骨架", C2)
-  _diamond(ax, cx, 2.45, [r"$R$ 宽高比", "异常?"])
-  _diamond(ax, cx, 1.45, [r"$v_y$ 快速", "下降?"])
+  _diamond(ax, cx, 2.45, ["宽高比 R", "是否异常?"])
+  _diamond(ax, cx, 1.45, ["竖直速度", "快速下降?"])
   rect(0.45, "触发 EMERGENCY", C_RED)
 
   for y1, y2 in [(3.15, 2.75), (2.45, 1.95), (1.45, 0.75)]:
@@ -419,22 +420,19 @@ def fig_eval_results() -> Path:
   details = data.get("details", [])
 
   fig = _fig()
-  # 底部单独留 Metrics 条，避免与坐标轴标签重叠
-  ax_cm = fig.add_axes([0.07, 0.28, 0.38, 0.62])
-  ax_bar = fig.add_axes([0.50, 0.28, 0.46, 0.62])
-  ax_note = fig.add_axes([0.07, 0.06, 0.86, 0.16])
-  ax_note.axis("off")
+  ax_cm = fig.add_axes([0.08, 0.12, 0.40, 0.78])
+  ax_bar = fig.add_axes([0.52, 0.12, 0.44, 0.78])
 
   cm = np.array([[tn, fp], [fn, tp]])
   ax_cm.imshow(cm, cmap="Blues", vmin=0, vmax=max(cm.max(), 1))
   ax_cm.set_xticks([0, 1])
-  ax_cm.set_xticklabels(["预测正常", "预测跌倒"], fontsize=9)
+  ax_cm.set_xticklabels(["预测正常", "预测跌倒"], fontsize=10)
   ax_cm.set_yticks([0, 1])
-  ax_cm.set_yticklabels(["真实正常", "真实跌倒"], fontsize=9)
+  ax_cm.set_yticklabels(["真实正常", "真实跌倒"], fontsize=10)
   for i in range(2):
     for j in range(2):
-      ax_cm.text(j, i, str(int(cm[i, j])), ha="center", va="center", fontsize=16, fontweight="bold", color=C0)
-  ax_cm.set_title("(a) 混淆矩阵 (n=6)", fontsize=10, fontweight="bold", color=C0, pad=6)
+      ax_cm.text(j, i, str(int(cm[i, j])), ha="center", va="center", fontsize=18, fontweight="bold", color=C0)
+  ax_cm.set_title("(a) 混淆矩阵  n=6", fontsize=11, fontweight="bold", color=C0, pad=8)
 
   if details:
     short = {
@@ -449,22 +447,17 @@ def fig_eval_results() -> Path:
     scores = [d.get("max_score", 0) for d in details]
     colors = [C_RED if d.get("detected") else C2 for d in details]
     ypos = np.arange(len(names))
-    ax_bar.barh(ypos, scores, color=colors, height=0.55, edgecolor=C0, linewidth=0.4)
+    ax_bar.barh(ypos, scores, color=colors, height=0.52, edgecolor=C0, linewidth=0.4)
     ax_bar.set_yticks(ypos)
-    ax_bar.set_yticklabels(names, fontsize=9)
-    ax_bar.tick_params(axis="y", pad=6)
-    ax_bar.set_xlabel("跌倒风险得分", fontsize=9, labelpad=4)
-    ax_bar.set_xlim(0, 1.05)
+    ax_bar.set_yticklabels(names, fontsize=10)
+    ax_bar.tick_params(axis="y", pad=8)
+    ax_bar.set_xlabel("跌倒风险得分", fontsize=10, labelpad=6)
+    ax_bar.set_xlim(0, 1.08)
     ax_bar.axvline(0.5, color=C_ORANGE, ls="--", lw=1.2)
-    ax_bar.text(0.52, 0.02, "阈值 0.5", fontsize=7, color=C_ORANGE, transform=ax_bar.transAxes, ha="left")
-  ax_bar.set_title("(b) 各场景得分", fontsize=10, fontweight="bold", color=C0, pad=6)
+    ax_bar.text(0.53, -0.12, "阈值 0.5", fontsize=8, color=C_ORANGE, transform=ax_bar.transAxes, ha="left")
+  ax_bar.set_title("(b) 各场景得分", fontsize=11, fontweight="bold", color=C0, pad=8)
   for spine in ("top", "right"):
     ax_bar.spines[spine].set_visible(False)
-
-  prf = f"P = {m.get('precision', 1):.0%}    R = {m.get('recall', 1):.0%}    F1 = {m.get('f1', 1):.0%}"
-  ax_note.text(0.5, 0.62, prf, ha="center", va="center", fontsize=11, fontweight="bold", color=C0)
-  ax_note.text(0.5, 0.18, "数据来源：data/evaluation/results/fall_eval_report.json",
-               ha="center", va="center", fontsize=8, color=C_GRAY)
   return _save(fig, "eval_results.png")
 
 
