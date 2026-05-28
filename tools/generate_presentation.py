@@ -346,7 +346,7 @@ def _place_image_only(
     w *= max_h / h
     h = max_h
   x = left + (max_w - w) / 2
-  y = top + (max_h - h) / 2
+  y = top
   slide.shapes.add_picture(str(path), Inches(x), Inches(y), width=Inches(w), height=Inches(h))
   return x, y, w, h
 
@@ -628,20 +628,28 @@ def _slide_skeleton_annotated(prs):
 
 
 def _screenshot_duo(prs, title: str, left_img: str, right_img: str, cap_l: str = "", cap_r: str = ""):
+  """双截图页：大图顶对齐，图注紧贴图下（避免中间空白与图注压图）。"""
   slide = _content_slide(prs, title, "系统实拍")
-  gap = 0.14
+  gap = 0.12
   half = (SLIDE_W - 2 * MARGIN - gap) / 2
-  region_h = CONTENT_H - 0.08
+  cap_h = 0.24
+  panel_h = CONTENT_H - 0.06
+  img_h = panel_h - cap_h - 0.10
   top = CONTENT_TOP + 0.04
+  pad = 0.05
   for i, (img, cap) in enumerate([(left_img, cap_l), (right_img, cap_r)]):
-    left = MARGIN + i * (half + gap)
-    _draw_figure_panel(slide, left=left, top=top, width=half, height=region_h)
-    _place_figure(
-      slide, ASSETS / img,
-      left=left + 0.08, top=top + 0.06,
-      max_w=half - 0.16, max_h=region_h - 0.08,
-      caption=cap, fill_ratio=0.94, framed=False,
+    col_l = MARGIN + i * (half + gap)
+    _draw_figure_panel(slide, left=col_l, top=top, width=half, height=panel_h)
+    inner_l = col_l + pad
+    inner_w = half - 2 * pad
+    path = ASSETS / img
+    if not path.exists():
+      continue
+    _, _, _, ih = _place_image_only(
+      slide, path, left=inner_l, top=top + pad, max_w=inner_w, max_h=img_h, fill_ratio=0.98,
     )
+    if cap and ih > 0:
+      _fig_caption_below(slide, inner_l, top + pad + ih + 0.05, inner_w, cap)
   return slide
 
 
@@ -954,23 +962,23 @@ def _slide_qr_dual(prs):
     demo = ASSETS / "ppt_full_dashboard.png"
   gap = 0.16
   cap_h = 0.26
-  img_top = FIG_TOP + 0.10
-  img_body = FIG_BODY_H - cap_h - 0.12
-  qr_col_w = 1.78
+  img_top = FIG_TOP + 0.08
+  img_body = FIG_BODY_H - cap_h - 0.10
+  qr_col_w = 1.75
   web_col_w = FIG_WIDTH - qr_col_w - gap
   if qr.exists():
-    _, _, qw, qh = _place_image_only(
-      slide, qr, left=FIG_LEFT, top=img_top, max_w=qr_col_w, max_h=min(1.65, img_body), fill_ratio=0.92,
+    _, _, _, qh = _place_image_only(
+      slide, qr, left=FIG_LEFT, top=img_top, max_w=qr_col_w, max_h=min(1.55, img_body), fill_ratio=0.95,
     )
     if qh > 0:
-      _fig_caption_below(slide, FIG_LEFT, img_top + qh + 0.06, qr_col_w, "仓库二维码")
+      _fig_caption_below(slide, FIG_LEFT, img_top + qh + 0.04, qr_col_w, "仓库二维码")
   if demo.exists():
     web_left = FIG_LEFT + qr_col_w + gap
     _, _, _, dh = _place_image_only(
-      slide, demo, left=web_left, top=img_top, max_w=web_col_w, max_h=img_body, fill_ratio=0.94,
+      slide, demo, left=web_left, top=img_top, max_w=web_col_w, max_h=img_body, fill_ratio=0.98,
     )
     if dh > 0:
-      _fig_caption_below(slide, web_left, img_top + dh + 0.06, web_col_w, "Web 感知界面")
+      _fig_caption_below(slide, web_left, img_top + dh + 0.04, web_col_w, "Web 感知界面")
 
 
 def _ensure_qr_code() -> None:
