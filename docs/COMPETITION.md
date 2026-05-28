@@ -37,4 +37,7 @@
 - [x] 答辩 PPT `docs/答辩_CareCompanion.pptx`
 - [x] 评测报告 `data/evaluation/results/fall_eval_report.json`
 - [x] Web 演示
-- [ ] 真机/高保真仿真视频（待补充）
+- [x] Isaac G1 仿真录屏 `docs/assets/demo_isaac_g1_locomotion.mp4`（已嵌入 PPT）
+- [x] 答辩进度规划 `docs/答辩进度规划.md`
+- [ ] 与 Web 跌倒片段剪辑合成（可选 `docs/assets/demo_carecompanion_full.mp4`）
+- [ ] 演示二维码 `docs/assets/ppt_demo_qr.png`（上传网盘/B 站后生成）

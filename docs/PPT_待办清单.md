@@ -1,10 +1,14 @@
 # CareCompanion 答辩 PPT — 待办清单
 
-## 已完成（2026-05-27）
+## 已完成
 
 - [x] 6 张 Web 截图已放入 `docs/assets/ppt_*.png`
 - [x] `tools/generate_presentation.py` 已自动插入截图页
-- [x] 输出文件：`docs/答辩_CareCompanion.pptx`（约 26 页）
+- [x] Web 演示录屏 `docs/assets/demo_carecompanion.mp4`
+- [x] Isaac G1 行走录屏 `docs/assets/demo_isaac_g1_locomotion.mp4`（2026-05-28）
+- [x] PPT 嵌入双演示视频页 + 海报帧 `ppt_isaac_g1_poster.png`
+- [x] 进度规划 `docs/答辩进度规划.md`
+- [x] 输出文件：`docs/答辩_CareCompanion.pptx`（约 30 页，以生成脚本为准）
 
 ### 截图与幻灯片对应
 
@@ -54,9 +58,9 @@ python tools/generate_presentation.py
 5. **跌倒场景全屏截图**  
    运行「模拟跌倒」剧本后，风险仪表盘显示 **紧急** 且分数升高时截一张，命名 `ppt_fall_emergency.png`。
 
-6. **真机 / 仿真视频**（若暂无真机）  
-   - 可用 Isaac / Gazebo 仿真 + `scripts/run_headless.sh` 日志录屏  
-   - 或 Unitree 实拍 30 秒「举手 + 语音」片段嵌入 PPT。
+6. **真机 / 仿真视频**  
+   - [x] Isaac G1 已录：`docs/assets/demo_isaac_g1_locomotion.mp4`（PPT 已嵌入）  
+   - [ ] 可选：Unitree 实拍 30 秒「举手 + 语音」替换或补充
 
 7. **对比实验一页**  
    若有时间：纯规则 vs 融合引擎的误报/漏报对比表（可用现有 `fall_eval_report.json`）。

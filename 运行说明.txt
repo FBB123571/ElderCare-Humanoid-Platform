@@ -26,6 +26,31 @@
 bash scripts/run_headless.sh     # 无界面逻辑验证
 bash scripts/run_gui.sh          # GUI 冒烟（SSH 看不到窗口）
 
+Isaac G1 仿真（本机观看 + 自己录屏）
+------------------------------------
+说明：远程 SSH 无法在你 Windows 上直接弹 3D 窗口，可用下面两种方式。
+
+【方式 A】本机已装 Isaac Lab + 显示器（推荐）
+  1. 把 checkpoint 拷到本机（或在本机下载，见 scripts/download_g1_checkpoint.sh）
+  2. 在本机终端:
+     export ISAACLAB_PATH=/path/to/IsaacLab
+     export CHECKPOINT=/path/to/g1_flat_checkpoint.pt
+     bash scripts/play_g1_local_gui.sh
+  3. 弹出 G1 仿真窗口后，用 Win+G 或 OBS 录屏
+
+【方式 B】仍在服务器跑，本机浏览器/客户端看直播
+  1. SSH 终端: bash scripts/play_g1_livestream.sh
+  2. Cursor → 端口 → 转发 49100
+  3. 本机安装 NVIDIA Isaac Sim WebRTC Streaming Client，连 127.0.0.1:49100
+  4. 对客户端窗口用 OBS 录制
+  若报 Permission denied（isaacsim/kit/cache）→ 见 docs/ISAAC_FIX_PERMISSIONS.md
+
+G1 仿真录屏（必须先修权限，只需一次）:
+  cd /mnt/sdb1/leijh/EnergySnake1/robot/ElderCare-Humanoid-Platform
+  sudo bash scripts/fix_isaac_permissions.sh    # 输入密码
+  bash scripts/setup_and_record_g1.sh           # 自动录屏
+  输出: docs/assets/demo_isaac_g1_locomotion.mp4
+
 说明
 ----
 - Windows CMD 不能运行 bash，请用 Cursor 底部终端。

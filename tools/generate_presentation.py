@@ -652,6 +652,48 @@ def _slide_skeleton_annotated(prs):
   return slide
 
 
+def _slide_video_embed(
+  prs,
+  title: str,
+  video_file: str,
+  bullets: list[str],
+  *,
+  poster_file: str = "",
+  caption: str = "演示录像（可全屏播放）",
+):
+  """右栏嵌入 mp4；无视频时用 poster 静图兜底。"""
+  slide = _content_slide(prs, title, "演示录像")
+  _bullets_panel(slide, bullets, size=12)
+  _draw_figure_panel(slide, left=COL_R + 0.04, top=FIG_TOP - 0.02, width=COL_R_W - 0.08, height=FIG_TOTAL_H)
+  mp4 = ASSETS / video_file
+  poster = ASSETS / (poster_file or video_file.replace(".mp4", "_poster.png"))
+  vl = COL_R + 0.10
+  vt = FIG_TOP + 0.06
+  vw = COL_R_W - 0.20
+  vh = FIG_BODY_H - 0.08
+  if mp4.exists():
+    try:
+      kwargs = {
+        "movie_file": str(mp4.resolve()),
+        "left": Inches(vl),
+        "top": Inches(vt),
+        "width": Inches(vw),
+        "height": Inches(vh),
+      }
+      if poster.exists():
+        kwargs["poster_frame_image"] = str(poster.resolve())
+        kwargs["mime_type"] = "video/mp4"
+      slide.shapes.add_movie(**kwargs)
+    except Exception as exc:
+      print(f"[WARN] 无法嵌入视频 {mp4.name}: {exc}")
+      if poster.exists():
+        _place_figure(slide, poster, left=vl, top=vt, max_w=vw, max_h=vh, caption=caption, fill_ratio=0.95)
+  elif poster.exists():
+    _place_figure(slide, poster, left=vl, top=vt, max_w=vw, max_h=vh, caption=caption, fill_ratio=0.95)
+  _fig_caption_below(slide, vl, vt + vh + 0.04, vw, caption)
+  return slide
+
+
 def _screenshot_duo(prs, title: str, left_img: str, right_img: str, cap_l: str = "", cap_r: str = ""):
   """双截图页：每栏图片+图注整体垂直居中，避免左右高度不齐。"""
   slide = _content_slide(prs, title, "系统实拍")
@@ -679,7 +721,8 @@ def _slide_open_source(prs):
     ("GitHub", GITHUB_URL),
     ("团队", f"{TEAM_NAME}（{SCHOOL}）"),
     ("本地演示", "bash scripts/run_web.sh"),
-    ("演示录像", "docs/assets/demo_carecompanion.mp4"),
+    ("Web 演示", "docs/assets/demo_carecompanion.mp4"),
+    ("G1 仿真", "docs/assets/demo_isaac_g1_locomotion.mp4"),
     ("软著", "申请中"),
   ]
   n = len(rows)
@@ -1132,6 +1175,33 @@ def main():
   _screenshot_duo(prs, "风险与情绪输入", "ppt_risk_panel.png", "ppt_emotion_input.png", "风险面板", "情绪输入")
   _screenshot_duo(prs, "紧急过程记录", "ppt_chat_emergency.png", "ppt_robot_commands.png", "对话日志", "机器人指令")
   _screenshot_slide(prs, "紧急时感知页", "ppt_header_perception.png", "状态切到紧急后的感知区")
+
+  _slide_video_embed(
+    prs,
+    "Web 全流程演示录像",
+    "demo_carecompanion.mp4",
+    [
+      "监测 → 老人倾诉 → 模拟跌倒 → 紧急流程",
+      "仓库内可离线播放，不依赖外网",
+      "与现场 run_web.sh 操作一致",
+      "右栏可全屏播放",
+    ],
+    poster_file="ppt_full_dashboard.png",
+    caption="demo_carecompanion.mp4",
+  )
+  _slide_video_embed(
+    prs,
+    "人形仿真行走（Isaac Lab · Unitree G1）",
+    "demo_isaac_g1_locomotion.mp4",
+    [
+      "Isaac Lab 平地速度跟踪预训练策略",
+      "固定前进 0.8 m/s，世界坐标侧拍全身",
+      "录屏段位移约 6 m，关节持续摆动",
+      "说明仿真层已对接，可扩展 ROS2 真机",
+    ],
+    poster_file="ppt_isaac_g1_poster.png",
+    caption="demo_isaac_g1_locomotion.mp4",
+  )
 
   _slide_lr(prs, "测试结果", [
     "跌倒检测 P/R/F1：合成 6 场景均为 100%",
